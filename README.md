@@ -4,6 +4,12 @@ An Isaac Sim 5.1 environment for testing dual-arm manipulation policies. The sce
 
 The cup, plate, table, camera poses, and YUBI dynamics contain estimates. See [the environment notes](yubi_isaac_sim_env/README.md) and [camera and mount audit](yubi_isaac_sim_env/CAMERA_MOUNT_REPORT.md) before using simulation results to predict real robot performance.
 
+## Which assets are included?
+
+The repository includes the cup, plate, table, tray, YUBI CAD and derived meshes, scene USDs, and the composed Franka–YUBI USD. The composed USD references one **missing runtime dependency**: NVIDIA's stock `franka_panda` directory, containing `franka_panda.usd` and four USD files under `configuration/`. Isaac Sim itself and policy checkpoints are also not included.
+
+There is no public Drive bundle for the stock Panda files. The redistribution rights for this exact five-file NVIDIA asset have not been established, and the [Isaac Sim Additional Software and Materials License](https://docs.nvidia.com/NVIDIA-IsaacSim-Additional-Software-and-Materials-License.pdf) restricts distributing covered software and materials. Obtain a compatible copy through [NVIDIA's Isaac Sim 5.1 downloads and asset packs](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/download.html) or a licensed installation, then provision it locally as shown below. This keeps the project assets public without republishing NVIDIA's files.
+
 ## Requirements
 
 - Linux workstation with an NVIDIA RTX GPU and a graphical desktop for the visible GUI. The environment requires CUDA and GPU PhysX. Use `--headless` on a GPU machine without a display.
@@ -34,6 +40,8 @@ bash yubi_isaac_sim_env/rebuild_assets.sh
 bash yubi_isaac_sim_env/pxr_python.sh -m yubi_isaac_sim_env.validate_assets
 ```
 
+If you downloaded an NVIDIA asset pack, locate `franka_panda.usd` in its extracted files and pass its **parent directory** to `--source`. The provisioner checks the five required USD files and their references. A different Panda asset layout or release may need adaptation; do not point it at an unrelated `franka.usd` file.
+
 The build creates `yubi_isaac_sim_env/assets/franka_yubi_panda.usdc` from the local Franka reference, the packaged YUBI meshes, and the JSON configuration. The validator checks the USD dependencies, GPU PhysX settings, both arm mounts, cameras, and asset hashes without launching the GUI. The `yubi_isaac_sim_env/scenes/` directory contains the composed stage loaded by the runner. Rebuild after changing geometry, robot configuration, or camera mounting in the asset builder. Changing only an object's reset pose or color needs no rebuild.
 
 ## Start the visible simulator
@@ -47,6 +55,17 @@ The build creates `yubi_isaac_sim_env/assets/franka_yubi_panda.usdc` from the lo
 The GUI is the default. `--camera` selects `head`, `left_wrist`, `right_wrist`, or `overview` for the viewport and the single-camera recorder. The head view approximates the source center videos; the wrist views use a nominal ELP fisheye model. `--keep-open` keeps rendering after the episode until the window closes. `--headless` disables the GUI while retaining GPU physics and RTX image rendering.
 
 The runner uses a 60 Hz physics step, a 10 Hz policy step, and 30 Hz video and joint sampling by default. `--steps 100` therefore allows up to ten simulated seconds. An episode can finish earlier if the task success condition is met.
+
+## Using another laptop
+
+Cloning this repository alone does **not** make the simulator runnable. The machine that executes `yubi_isaac_sim_env.run` needs Isaac Sim 5.1, a supported NVIDIA RTX GPU and driver, and the locally provisioned Panda asset. A compatible Linux laptop can install those dependencies and follow the commands above. A laptop without Isaac Sim or a suitable GPU can instead submit runs to a prepared GPU workstation and inspect the returned recordings:
+
+```bash
+ssh GPU_HOST 'cd /path/to/dual-franka-yubi-isaac-sim && /path/to/isaac-python -m yubi_isaac_sim_env.run --headless --setup random:0 --seed 42 --policy hold --steps 100 --record-run runs/remote_001'
+scp -r GPU_HOST:/path/to/dual-franka-yubi-isaac-sim/runs/remote_001 ./remote_001
+```
+
+Replace the host and paths with the GPU workstation's values, and use a new run directory for each experiment. Isaac Sim and the Panda asset remain on that workstation; the laptop needs only SSH to launch the example and copy its MP4, joint CSV, and reports. Custom policy scripts currently run **inside the simulator process on the GPU host**. This repository does not yet expose a network `reset`/`step` service or turn `--headless` into a live GUI stream. For an interactive remote view, configure an Isaac Sim host and client using [NVIDIA's livestream documentation](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/manual_livestream_clients.html); integrating that with this runner requires separate setup.
 
 ## Object setups and placement
 
