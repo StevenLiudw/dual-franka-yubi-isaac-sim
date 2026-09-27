@@ -30,6 +30,19 @@ export ISAAC_PYTHON="$PWD/.venv/bin/python"
 
 Run the following commands from this repository's root. If Isaac Sim is already installed, set `ISAAC_PYTHON` to the Python executable or `python.sh` from that installation instead. Keep the variable set for the asset build scripts as well as the runner.
 
+### RTX 50 series and other Blackwell GPUs
+
+The Isaac Sim 5.1 pip install can select PyTorch `2.7.0+cu126`, which has no `sm_120` kernels for an RTX 5090. After installing Isaac Sim, replace torch, torchvision, and torchaudio with their matching [official CUDA 12.8 builds](https://pytorch.org/blog/pytorch-2-7/) in the **same** environment:
+
+```bash
+python -m pip install --index-url https://download.pytorch.org/whl/cu128 \
+  'torch==2.7.0' 'torchvision==0.22.0' 'torchaudio==2.7.0'
+python -c 'import torch; print(torch.__version__, torch.version.cuda, torch.cuda.get_arch_list())'
+python -m pip check
+```
+
+Confirm that the architecture list includes `sm_120` before starting the simulator. The three package versions stay at Isaac Sim 5.1's pinned versions; only their CUDA build changes. On a server without a system `ffmpeg`, install `imageio-ffmpeg` in this environment and place a link to its bundled executable on `PATH` before using `--record-run`.
+
 ## Provision assets and create the scene
 
 Point the provisioner at a **directory** containing `franka_panda.usd` and its `configuration/` files:
@@ -55,6 +68,16 @@ The build creates `yubi_isaac_sim_env/assets/franka_yubi_panda.usdc` from the lo
 The GUI is the default. `--camera` selects `head`, `left_wrist`, `right_wrist`, or `overview` for the viewport and the single-camera recorder. The head view approximates the source center videos; the wrist views use a nominal ELP fisheye model. `--keep-open` keeps rendering after the episode until the window closes. `--headless` disables the GUI while retaining GPU physics and RTX image rendering.
 
 The runner uses a 60 Hz physics step, a 10 Hz policy step, and 30 Hz video and joint sampling by default. `--steps 100` therefore allows up to ten simulated seconds. An episode can finish earlier if the task success condition is met.
+
+On a multi-GPU machine, select one physical GPU for RTX rendering and expose that same GPU as CUDA device 0 for physics. For example, to use GPU 6 from `nvidia-smi`:
+
+```bash
+CUDA_VISIBLE_DEVICES=6 ISAAC_ACTIVE_GPU=6 "$ISAAC_PYTHON" -m yubi_isaac_sim_env.run \
+  --headless --setup random:0 --camera head --policy hold --steps 10 \
+  --record-run runs/gpu6_smoke
+```
+
+`ISAAC_ACTIVE_GPU` is a physical GPU index. `physics_gpu=0` refers to the first GPU exposed by `CUDA_VISIBLE_DEVICES`. Setting `ISAAC_ACTIVE_GPU` also disables multi-GPU rendering for that run. Without these variables, the launcher retains its original GPU 0 behavior. Check `report.json` for `"status": "completed"` and inspect the MP4; an install or renderer error can occur after Kit starts.
 
 ## Using another laptop
 

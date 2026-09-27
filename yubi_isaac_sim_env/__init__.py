@@ -49,8 +49,15 @@ def create_sim(
         raise RuntimeError("GUI requested but no DISPLAY or WAYLAND_DISPLAY is set")
     from isaacsim import SimulationApp
 
+    # Renderer IDs follow physical nvidia-smi order. Physics GPU 0 follows
+    # CUDA_VISIBLE_DEVICES, so select both explicitly on a multi-GPU host.
+    selected_gpu = os.environ.get("ISAAC_ACTIVE_GPU")
+    active_gpu = int(selected_gpu) if selected_gpu is not None else 0
+    if active_gpu < 0:
+        raise ValueError("ISAAC_ACTIVE_GPU must be nonnegative")
     app = SimulationApp(
-        {"headless": not gui, "active_gpu": 0, "physics_gpu": 0, "renderer": "RaytracedLighting"}
+        {"headless": not gui, "active_gpu": active_gpu, "physics_gpu": 0,
+         "multi_gpu": selected_gpu is None, "renderer": "RaytracedLighting"}
     )
     import omni.usd
 
