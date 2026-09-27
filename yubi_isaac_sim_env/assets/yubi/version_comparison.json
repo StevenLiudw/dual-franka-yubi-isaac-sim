@@ -1,0 +1,330 @@
+{
+  "v1": {
+    "FLAP_L_AIROA": {
+      "volume_mm3": 3812.3003536367364,
+      "area_mm2": 4174.296504354118,
+      "bbox_span_mm": [
+        30.000000200000002,
+        50.0000002,
+        21.000000200088394
+      ],
+      "solid_count": 1,
+      "face_count": 49,
+      "sha256": "d893d687df648e17ba3041088cbb88f827796545307002a76f3fa9907ad8e74b"
+    },
+    "FINGER ATTACHMENT_L": {
+      "volume_mm3": 8394.909701082193,
+      "area_mm2": 5337.253621916688,
+      "bbox_span_mm": [
+        26.000341279406783,
+        77.00034127938679,
+        20.000341279367642
+      ],
+      "solid_count": 1,
+      "face_count": 50,
+      "sha256": "f78906747c6b98e7a09b64591d16cbfcf62bfe4d234e465f9b960a8e087c9f3b"
+    },
+    "CASE": {
+      "volume_mm3": 16022.952274505607,
+      "area_mm2": 11371.833325385167,
+      "bbox_span_mm": [
+        67.00766272867357,
+        36.007662728675044,
+        22.007662728673573
+      ],
+      "solid_count": 1,
+      "face_count": 141,
+      "sha256": "2db86267f0faf83f3d4f89fe23d86b48735884d3e7affaa6404aa1979d17b0eb"
+    },
+    "BRACKET_GRIPPER": {
+      "volume_mm3": 14356.145293360769,
+      "area_mm2": 9039.396077194295,
+      "bbox_span_mm": [
+        52.5000002,
+        84.0000002,
+        8.000000200000583
+      ],
+      "solid_count": 1,
+      "face_count": 77,
+      "sha256": "4a6fba05b237b725be2ca4e5ba7f7617674b4bcae4164ff32e88d9e75275017a"
+    },
+    "FINGER PAD_T20": {
+      "volume_mm3": 12299.795043936256,
+      "area_mm2": 5173.61797969741,
+      "bbox_span_mm": [
+        14.001734433441968,
+        83.50173540095929,
+        20.0021771577231
+      ],
+      "solid_count": 1,
+      "face_count": 89,
+      "sha256": "6ef68232581923fd8ba62ccd6d691b9981811945d6cccf2ae311cd577afa6f77"
+    },
+    "TOOL FLANGE": {
+      "volume_mm3": 16375.826550141304,
+      "area_mm2": 10202.91303747327,
+      "bbox_span_mm": [
+        84.0000002,
+        11.000000200001047,
+        55.0000002
+      ],
+      "solid_count": 1,
+      "face_count": 60,
+      "sha256": "b1be70213bbba603ee6911e2f3fb2042d97eb2957d7de03ccab4856344ea9a77"
+    },
+    "FINGER PAD_T30_L": {
+      "volume_mm3": 16569.983467201997,
+      "area_mm2": 6702.567261710311,
+      "bbox_span_mm": [
+        14.142624698011701,
+        83.56352492776907,
+        30.001912243220318
+      ],
+      "solid_count": 1,
+      "face_count": 99,
+      "sha256": "5ab303ed88e9117db6d129cb9bf7a1328f4c6f0909335c731f281b8f7e4d222c"
+    },
+    "BRACKET_DYNAMIXEL": {
+      "volume_mm3": 13033.72854935106,
+      "area_mm2": 10851.10818087692,
+      "bbox_span_mm": [
+        65.50076900563435,
+        32.00076900563436,
+        45.00076900563435
+      ],
+      "solid_count": 1,
+      "face_count": 54,
+      "sha256": "b276148458a23e32c7b3b2224eaaa34d3f976887b79f45648a9c89cc90de875b"
+    },
+    "FINGER PAD_T30_R": {
+      "volume_mm3": 16569.983467168367,
+      "area_mm2": 6702.567261712061,
+      "bbox_span_mm": [
+        14.142624698011701,
+        83.56352492776907,
+        30.001912243220318
+      ],
+      "solid_count": 1,
+      "face_count": 99,
+      "sha256": "a44d41bcb91584950fedad25ec8bd4cb4aade815f51ad145245734aea1211d97"
+    },
+    "FINGER ATTACHMENT_R": {
+      "volume_mm3": 8394.909547388368,
+      "area_mm2": 5337.253588118112,
+      "bbox_span_mm": [
+        26.000341279417846,
+        77.00034127939784,
+        20.00034127937871
+      ],
+      "solid_count": 1,
+      "face_count": 50,
+      "sha256": "70adb1764bbc39276d88c58e2d3d412fec53e82cb373f4880626ed536b889f9f"
+    },
+    "GEAR SHAFT": {
+      "volume_mm3": 2455.7857408943064,
+      "area_mm2": 1787.2583307188058,
+      "bbox_span_mm": [
+        20.0000002,
+        20.0000002,
+        32.0000002
+      ],
+      "solid_count": 1,
+      "face_count": 55,
+      "sha256": "f2520fa8cb167c542c1451b2b563843d1f5e3808b50b8f81a4040dc636bfcc17"
+    },
+    "BRACKET_CAMERA": {
+      "volume_mm3": 5108.712416082378,
+      "area_mm2": 5204.902990341068,
+      "bbox_span_mm": [
+        34.000669082706374,
+        28.000669082668523,
+        43.695261793328065
+      ],
+      "solid_count": 1,
+      "face_count": 117,
+      "sha256": "9ce4abb1182785fc8bb28843058c8678a9907a568c8bd119cfce64b2dee6ff1f"
+    },
+    "FLAP_R_AIROA": {
+      "volume_mm3": 3812.300353626704,
+      "area_mm2": 4174.296504351111,
+      "bbox_span_mm": [
+        30.000000200000002,
+        50.0000002,
+        21.000000200088394
+      ],
+      "solid_count": 1,
+      "face_count": 49,
+      "sha256": "54c59c6b926b4553ddbe9221cdc0806dcf1014b953ca03d06b4c843695173064"
+    },
+    "UPPER PLATE": {
+      "volume_mm3": 13067.77419221959,
+      "area_mm2": 8413.000246087584,
+      "bbox_span_mm": [
+        67.00184064105346,
+        41.001840641031336,
+        15.001842631309856
+      ],
+      "solid_count": 1,
+      "face_count": 115,
+      "sha256": "92e20cce8cd14b26e4d796bfe898505ec9f4ca7705fef52001abe0cdf49e3eda"
+    }
+  },
+  "v2": {
+    "BRACKET_DYNAMIXEL": {
+      "volume_mm3": 13037.205481196603,
+      "area_mm2": 10851.356747671462,
+      "bbox_span_mm": [
+        65.5000002,
+        45.00000020000002,
+        32.00000020000001
+      ],
+      "solid_count": 1,
+      "face_count": 54,
+      "sha256": "e20a9189df6c397110b44d50b8556fc6a8aa83e5eaf14d450b930aecd7e9e607"
+    },
+    "FINGER PAD_T30_L": {
+      "volume_mm3": 16514.65688622997,
+      "area_mm2": 6681.843663559002,
+      "bbox_span_mm": [
+        84.13039479918244,
+        30.00005920214505,
+        14.00003830336612
+      ],
+      "solid_count": 1,
+      "face_count": 97,
+      "sha256": "876599001c15ed82cd273944582ddf3fd0714424909e7cb126aabf0da8b9290d"
+    },
+    "UPPER PLATE_CAMERA BKT": {
+      "volume_mm3": 18600.901672136333,
+      "area_mm2": 12415.516626132357,
+      "bbox_span_mm": [
+        67.00020134398099,
+        58.86844223231559,
+        41.000201343980976
+      ],
+      "solid_count": 1,
+      "face_count": 199,
+      "sha256": "8a7b8234dfba74d6a50f288610cd0e92ccc36cd03506dbca7b51b40cc3ce4125"
+    },
+    "FINGER ATTACHMENT_L": {
+      "volume_mm3": 8383.883680416166,
+      "area_mm2": 5370.428945164852,
+      "bbox_span_mm": [
+        77.00000019999999,
+        20.000000200000006,
+        26.00000020000001
+      ],
+      "solid_count": 1,
+      "face_count": 54,
+      "sha256": "b27cad687803b940ceacb337b74a68b7b5a3bf1a9e2fcf3e3ebdd76aba7d7731"
+    },
+    "FLAP_R": {
+      "volume_mm3": 3825.8429927076436,
+      "area_mm2": 4172.257722742773,
+      "bbox_span_mm": [
+        30.00000020000001,
+        21.000000200000002,
+        50.0000002
+      ],
+      "solid_count": 1,
+      "face_count": 46,
+      "sha256": "87ba7ac75cafb5117a00f4a58e82e210c8bdef974faee9cf7b6af7e3a27df16c"
+    },
+    "GEAR SHAFT": {
+      "volume_mm3": 2455.7857660701593,
+      "area_mm2": 1787.2585542929885,
+      "bbox_span_mm": [
+        20.000001313409317,
+        32.000001313409314,
+        20.000001313409317
+      ],
+      "solid_count": 1,
+      "face_count": 55,
+      "sha256": "24c167b7b0840510c6b778d96e77ca20c92a26f20b2d4df6a41ed35d2775c2cd"
+    },
+    "BRACKET_GRIPPER": {
+      "volume_mm3": 14356.767328706197,
+      "area_mm2": 9041.370207785907,
+      "bbox_span_mm": [
+        84.0000002,
+        52.500000200000024,
+        8.000000199999999
+      ],
+      "solid_count": 1,
+      "face_count": 73,
+      "sha256": "ae8e102e3afaa377d12f9b60a292a1870e7dafa7ffb63ce8e163642654079c4f"
+    },
+    "CASE": {
+      "volume_mm3": 16049.10081706573,
+      "area_mm2": 11324.470048255045,
+      "bbox_span_mm": [
+        67.00000020000002,
+        22.00000020000001,
+        36.000000200000024
+      ],
+      "solid_count": 1,
+      "face_count": 144,
+      "sha256": "1972ca1496390f3498dbb293e9c1444e98701cd0c3e504e5f99df75effa98d66"
+    },
+    "FINGER PAD_T20": {
+      "volume_mm3": 12252.818986391712,
+      "area_mm2": 5162.764266818575,
+      "bbox_span_mm": [
+        83.52074952096308,
+        20.00041799894721,
+        14.000375388735527
+      ],
+      "solid_count": 1,
+      "face_count": 84,
+      "sha256": "e276f4136b045afaf2c61bee9cce92ae97b4781c34e01f74437c608d5e89108b"
+    },
+    "UR5E_FLANGE": {
+      "volume_mm3": 20602.037607278355,
+      "area_mm2": 10684.672756578857,
+      "bbox_span_mm": [
+        84.0000002,
+        16.500000200000244,
+        55.0000002
+      ],
+      "solid_count": 1,
+      "face_count": 65,
+      "sha256": "7e6c0fab9b9a8d9c0d63e172770b523ee0d5a063045505972ebf2d3bef3ae3f9"
+    },
+    "FLAP_L": {
+      "volume_mm3": 3825.842992707643,
+      "area_mm2": 4172.257722742774,
+      "bbox_span_mm": [
+        30.00000020000001,
+        21.000000200000002,
+        50.0000002
+      ],
+      "solid_count": 1,
+      "face_count": 46,
+      "sha256": "d193aa43ec16f8b674328781d93b7dd423934df3edab287d5ad061f40933b18c"
+    },
+    "FINGER PAD_T30_R": {
+      "volume_mm3": 16515.672528139858,
+      "area_mm2": 6682.123972047431,
+      "bbox_span_mm": [
+        84.13168021271144,
+        30.001328673052235,
+        14.001323716895133
+      ],
+      "solid_count": 1,
+      "face_count": 97,
+      "sha256": "4ca60e190fa1c4f97400704fddfef60b197ee07db4f1e2f42b354650276ceeb8"
+    },
+    "FINGER ATTACHMENT_R": {
+      "volume_mm3": 8393.965924818647,
+      "area_mm2": 5324.199323035859,
+      "bbox_span_mm": [
+        77.00000019999999,
+        20.000000200000006,
+        26.000000199999995
+      ],
+      "solid_count": 1,
+      "face_count": 54,
+      "sha256": "2fad70262a99c5768a5dbaf0a12413043f2e24a521f6762b5cffcf7f0bb79e42"
+    }
+  }
+}

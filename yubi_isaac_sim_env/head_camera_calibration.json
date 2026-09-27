@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "camera_path": "/World/Sensors/HeadCamera",
+  "resolution_px": [
+    640,
+    480
+  ],
+  "eye_world_m": [
+    0.250515,
+    0.0,
+    1.88
+  ],
+  "quaternion_wxyz": [
+    0.7029039776384705,
+    -0.07698050545441136,
+    0.07698050545441136,
+    -0.7029039776384705
+  ],
+  "focal_length_m": 0.031725,
+  "horizontal_aperture_m": 0.036,
+  "horizontal_flip_for_dataset": true,
+  "height_above_table_m": 1.13,
+  "table_top_z_m": 0.75,
+  "estimated_tilt_deg": 12.5,
+  "tilt_applied_deg": 12.5,
+  "tilt_direction": "eye toward +world X (far table edge), optical axis tilted toward -world X (near edge)",
+  "provenance": {
+    "source": "Five 640x480 center-view cup replay videos; MoGe-3 plane/focal estimates on three tabletop frames",
+    "status": "estimated; no measured physical intrinsics or extrinsics",
+    "moge_focal_px": 564.0,
+    "moge_plane_tilt_deg_range": [
+      10.3,
+      14.4
+    ],
+    "height_method": "MoGe-3 tabletop-plane geometry rescaled against the known 0.19 m KALAS plate and checked against the cup projection",
+    "object_scale_crosscheck": "19 cm KALAS plate appears approximately 90-100 pixels; 8 cm cup proxy approximately 40 pixels",
+    "frame_alignment": "+world X toward image top, +world Y toward image right after horizontal RGB flip",
+    "renderer_note": "Isaac RTX legacy camera projection was empirically tighter than its reported USD intrinsics; explicit zero-distortion OpenCvPinhole lens matches plate pixels."
+  },
+  "lens_model": "OpenCvPinhole",
+  "intrinsics_px": {
+    "fx": 564.0,
+    "fy": 564.0,
+    "cx": 320.0,
+    "cy": 240.0
+  },
+  "distortion_coefficients": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+  ]
+}

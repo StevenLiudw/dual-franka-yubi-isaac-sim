@@ -1,0 +1,78 @@
+{
+  "repo": "https://github.com/Toyota/yubi-hw",
+  "tag": "v2.0.0",
+  "commit": "dd8bd13d2fd8e5003057243576f88be333d95fc5",
+  "license": "CERN-OHL-W-2.0",
+  "source_files": [
+    {
+      "path": "README.md",
+      "sha256": "76bb4ab490f27481391b76bf2d40a5467ad0fdeabf1634e1bfb44239c68628a7",
+      "url": "https://github.com/Toyota/yubi-hw/blob/v2.0.0/README.md"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "6d3e25e377354ac09d62d33c38520d0fc2a0d7be84b346643de91a5d46d98902",
+      "url": "https://github.com/Toyota/yubi-hw/blob/v2.0.0/LICENSE"
+    },
+    {
+      "path": "STEP/gripper/YUBI Gripper Assy_Dynamixel_ver2.STEP",
+      "sha256": "0e60bf62de970e5fae5e7cff104f547a954ef8d5d7b9dde9835b381b95f4fcc8",
+      "url": "https://github.com/Toyota/yubi-hw/blob/v2.0.0/STEP/gripper/YUBI%20Gripper%20Assy_Dynamixel_ver2.STEP"
+    },
+    {
+      "path": "docs/AssemblyInstruction/YUBI Gripper_DYNAMIXEL_AssemblyGuide.pdf",
+      "sha256": "297a7214e15ff0aef85f0cec1eed54dbc538553e78988b8e03c9c55fb4b93011",
+      "url": "https://github.com/Toyota/yubi-hw/blob/v2.0.0/docs/AssemblyInstruction/YUBI%20Gripper_DYNAMIXEL_AssemblyGuide.pdf"
+    },
+    {
+      "path": "docs/BOM/YUBI Gripper_DYNAMIXEL_BOM.md",
+      "sha256": "ee11f4762a299c858cf5f0764df9cc79340b5aa0fd0761abf8f3b55fef9f40a3",
+      "url": "https://github.com/Toyota/yubi-hw/blob/v2.0.0/docs/BOM/YUBI%20Gripper_DYNAMIXEL_BOM.md"
+    },
+    {
+      "source_root": "source_v1.1.2",
+      "path": "LICENSE",
+      "sha256": "68b4d053489efc7565fc585a23802666099741d33b9615256b0f38834593e474",
+      "url": "https://github.com/Toyota/yubi-hw/blob/v1.1.2/LICENSE"
+    },
+    {
+      "source_root": "source_v1.1.2",
+      "path": "STL/flange/FR_FLANGE.stl",
+      "sha256": "7152fda1b5bc3963559762239ba8f0b512fd042d93c8d8ca6ec5e474b295e2aa",
+      "url": "https://github.com/Toyota/yubi-hw/blob/v1.1.2/STL/flange/FR_FLANGE.stl"
+    }
+  ],
+  "generated_files": [
+    {
+      "path": "fixed.stl",
+      "sha256": "b39a6ed08a29ee37a2a882519bb7ef2920cf09b9ee77e96d29c76626421dd217",
+      "bytes": 5155034
+    },
+    {
+      "path": "jaw_left.stl",
+      "sha256": "4ed3809f073cb0fdd8ba6625d0ca1ac3d8bc40c8789b0b7e7f22ee79cd4375bd",
+      "bytes": 1052684
+    },
+    {
+      "path": "jaw_right.stl",
+      "sha256": "30249994eac4b40c57a70691c45c2fa6bc50fcba705e0e6d4c407168e1c550ee",
+      "bytes": 1170084
+    },
+    {
+      "path": "franka_adapter_v1.stl",
+      "sha256": "29b3314020d5331baf50cc14adb886d19803d03d19569bb3e01d1ee4d980b0df",
+      "bytes": 396684
+    }
+  ],
+  "notes": [
+    "All output meshes have meters as vertex units in a common mount frame; source STEP uses millimeters.",
+    "Masses and actuator range require as-built calibration.",
+    "Runtime uses the guide-linked v1.1.2 FR_FLANGE direct adapter, not the v2 adapter_pair mesh. Official v1/v2 bracket hole patterns match; see franka_adapter_v1_manifest.json and version_comparison.json."
+  ],
+  "asset_composition": {
+    "gripper": "Toyota/yubi-hw v2.0.0 motorized assembly",
+    "franka_adapter": "Toyota/yubi-hw v1.1.2 single-piece FR_FLANGE",
+    "status": "Mixed official-source versions; v1.1.2 gripper assembly STEP is flattened and was not used for articulated mesh extraction"
+  },
+  "v1_adapter_commit": "ce5a191c9189fbc057a808876a0daedef1519310"
+}

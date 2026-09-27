@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "status": "illustrative dual-arm mounts; robot base poses were not measured in the source videos",
+  "robot_asset": "assets/franka_yubi_panda.usdc",
+  "arms": {
+    "left": {
+      "base_xyz_m": [
+        -0.53,
+        -0.44,
+        0.75
+      ],
+      "base_yaw_rad": 0.35
+    },
+    "right": {
+      "base_xyz_m": [
+        -0.53,
+        0.44,
+        0.75
+      ],
+      "base_yaw_rad": -0.35
+    }
+  },
+  "home_arm_joint_rad": [
+    0.0,
+    -0.569,
+    0.0,
+    -2.81,
+    0.0,
+    3.037,
+    0.741
+  ],
+  "physics_hz": 60,
+  "policy_hz": 10,
+  "max_policy_steps": 150,
+  "success": {
+    "cup_center_radius_m": 0.035,
+    "cup_bottom_height_tolerance_m": 0.002,
+    "cup_max_tilt_deg": 15.0,
+    "max_linear_speed_m_s": 0.05,
+    "max_angular_speed_rad_s": 0.3,
+    "dwell_policy_steps": 5
+  },
+  "yubi": {
+    "q_closed_rad": 0.0,
+    "q_open_rad": 0.6,
+    "home_open_fraction": 1.0,
+    "limit_status": "Conservative CAD exterior-mesh collision-free opening through 0.6 rad; motorized servo limits and PhysX contact remain uncalibrated",
+    "grip_drive_max_force_Nm": 0.5,
+    "force_status": "Conservative simulation tuning placeholder, not a measured continuous motor limit",
+    "mass_kg": {
+      "base": 0.307,
+      "left": 0.111,
+      "right": 0.124,
+      "tool": 0.001
+    },
+    "mass_status": "Estimates informed by Toyota v2 gripper STEP, v1 direct flange volume, BOM, and ROBOTIS 82 g servo; weigh assembled hardware for fidelity",
+    "friction": {
+      "static": 0.8,
+      "dynamic": 0.65
+    },
+    "friction_status": "Rubber pads are specified; coefficients are provisional simulator tuning values",
+    "tool_frame_xyz_m": [
+      0.0,
+      0.018,
+      0.145
+    ],
+    "tool_frame_status": "Pinch-point estimate from assembled CAD; verify with camera/tool calibration"
+  }
+}

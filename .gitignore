@@ -1,0 +1,30 @@
+# Isaac Sim stock robot assets are provisioned locally from each user's
+# licensed installation. They must not be committed to this public repository.
+/yubi_isaac_sim_env/assets/franka_panda/
+
+# Video-derived private layouts are intentionally absent from the public repo.
+/yubi_isaac_sim_env/setups/episode_*.json
+/yubi_isaac_sim_env/setups/physics_safe_episode_*.json
+
+# Python and local environments.
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Local experiment outputs.
+runs/
+yubi_runs/
+outputs/
+recordings/
+*.mp4
+*.avi
+*.mov
+
+# Editor and operating-system files.
+.DS_Store
+.idea/
+.vscode/

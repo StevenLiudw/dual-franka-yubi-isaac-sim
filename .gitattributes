@@ -1,0 +1,6 @@
+# Preserve vendor CAD bytes and avoid rendering enormous STEP text diffs.
+*.STEP binary
+*.stl binary
+*.pdf binary
+*.usd binary
+*.usdc binary

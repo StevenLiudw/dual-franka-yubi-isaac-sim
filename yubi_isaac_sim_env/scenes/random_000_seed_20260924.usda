@@ -1,0 +1,88 @@
+#usda 1.0
+# Initial state only. Geometry and source XY positions originate in scene.json.
+# World XY is table-centered; table.top_z is measured from the provisional Z=0 datum.
+# Seeded synthetic initial state; sampled poses and colors are not observations.
+# Cup and tray use provisional mass estimates; contact/friction are unverified.
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    kilogramsPerUnit = 1
+    upAxis = "Z"
+)
+def Xform "World"
+{
+    custom string real2sim:sceneKind = "seeded_randomization"
+    custom string real2sim:scenarioId = "random_000_seed_20260924"
+    custom int real2sim:randomSeed = 20260924
+    custom int real2sim:randomIndex = 0
+    custom string real2sim:placementStatus = "seeded synthetic initial state; no depth or measured camera pose"
+    custom string real2sim:sourceConfig = "scene.json"
+    custom string real2sim:geometryStatus = "unverified provisional reconstruction"
+    custom string real2sim:physicsStatus = "dynamic bodies; mass estimated; friction/COM/contact unverified"
+
+    def PhysicsScene "PhysicsScene"
+    {
+        vector3f physics:gravityDirection = (0.0, 0.0, -1.0)
+        float physics:gravityMagnitude = 9.81
+    }
+
+    def Scope "Lights"
+    {
+        def DomeLight "InspectionLight"
+        {
+            # Preview-only illumination; no real lighting measurement exists.
+            custom string real2sim:status = "illustrative inspection light"
+            float inputs:intensity = 500.0
+        }
+    }
+
+    def Xform "Environment"
+    {
+        def Xform "Table" (
+            prepend references = @../assets/table.usda@
+        )
+        {
+            double3 xformOp:translate = (0.0, 0.0, 0.75)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+        }
+    }
+
+    def Xform "Objects"
+    {
+        def Xform "Tray" (
+            prepend references = @../assets/tray.usda@
+        )
+        {
+            double3 xformOp:translate = (-0.05476, -0.103805, 0.75)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+            over "Looks"
+            {
+                over "TrayMaterial"
+                {
+                    over "PreviewSurface"
+                    {
+                        color3f inputs:diffuseColor = (0.909803922, 0.807843137, 0.301960784)
+                    }
+                }
+            }
+        }
+
+        def Xform "Cup" (
+            prepend references = @../assets/cup.usda@
+        )
+        {
+            double3 xformOp:translate = (-0.146201, 0.159747, 0.75)
+            uniform token[] xformOpOrder = ["xformOp:translate"]
+            over "Looks"
+            {
+                over "CupMaterial"
+                {
+                    over "PreviewSurface"
+                    {
+                        color3f inputs:diffuseColor = (0.658823529, 0.796078431, 0.705882353)
+                    }
+                }
+            }
+        }
+    }
+}

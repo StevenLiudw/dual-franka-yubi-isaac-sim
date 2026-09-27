@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "title": "Dual-Franka YUBI cup and plate tabletop",
+  "world_frame": {
+    "up": "Z",
+    "length_unit": "meter",
+    "x_direction": "toward the far edge of the table in the fixed center view",
+    "y_direction": "image right in the fixed center view",
+    "origin": "XY at center of the visible tabletop; Z=0 is an illustrative floor-height datum"
+  },
+  "observation_map": {
+    "camera": "center",
+    "resolution_px": [
+      640,
+      480
+    ],
+    "origin_px": [
+      320,
+      240
+    ],
+    "meters_per_pixel": 0.00202,
+    "mapping": "x=(240-v)*meters_per_pixel; y=(u-320)*meters_per_pixel",
+    "status": "illustrative flat projection, not camera calibration",
+    "scale_basis": "official IKEA KALAS plate outer diameter 0.19 m divided by approximately 94 observed image pixels"
+  },
+  "table": {
+    "width": 1.3,
+    "depth": 0.82,
+    "top_z": 0.75,
+    "thickness": 0.035,
+    "status": "illustrative dimensions; not measured"
+  },
+  "cup": {
+    "top_radius": 0.04,
+    "bottom_radius": 0.027,
+    "height": 0.075,
+    "wall_thickness": 0.002,
+    "color": "#78c8e4",
+    "status": "KALAS 403.786.70: 23 cl capacity and 8 cm package diameter from IKEA; 8 cm outer diameter proxy, height/profile inferred to yield approximately 23 cl interior volume; mass is six-pack net weight / 6",
+    "mass_kg": 0.0317,
+    "capacity_l": 0.23,
+    "product": {
+      "article_no": "403.786.70",
+      "url": "https://www.ikea.com.hk/en/products/children%27s-small-furniture-eat---study/baby-utensils-and-high-chair/kalas-art-40378670",
+      "package_quantity": 6,
+      "package_net_weight_kg": 0.19,
+      "mass_source": "0.19 kg six-pack net / 6; approximate single-piece mass",
+      "dimension_source": "8 cm six-pack package diameter as outer cup diameter proxy; individual cup height unlisted"
+    }
+  },
+  "tray": {
+    "outer_radius": 0.095,
+    "inner_radius": 0.083,
+    "height": 0.018,
+    "base_thickness": 0.003,
+    "status": "KALAS 203.786.71: 19 cm product diameter from IKEA; profile/depth inferred; mass is six-pack net weight / 6",
+    "mass_kg": 0.0567,
+    "product": {
+      "article_no": "203.786.71",
+      "url": "https://www.ikea.com.hk/en/products/children%27s-small-furniture-eat---study/baby-utensils-and-high-chair/kalas-art-20378671",
+      "package_quantity": 6,
+      "package_net_weight_kg": 0.34,
+      "mass_source": "0.34 kg six-pack net / 6; approximate single-piece mass",
+      "dimension_source": "19 cm individual plate diameter; 5 cm listed package height is six stacked plates, not one plate"
+    }
+  },
+  "verification": {
+    "visual_alignment": "pending camera calibration and manual review",
+    "geometry": "plate diameter measured by IKEA; cup diameter proxy from package; other geometry unverified",
+    "collision": "Public release requires a GPU PhysX settling and contact check on the target workstation",
+    "physics": "object mass estimated from six-pack net weight / 6; settling smoke checks completed, friction and task-level dynamics unverified"
+  },
+  "randomization": {
+    "plate_center_region_radius": 0.16,
+    "cup_clearance_m": 0.015,
+    "table_edge_margin_m": 0.025,
+    "cup_max_distance_m": 0.3,
+    "seed": 20260924,
+    "cup_colors": [
+      "#78c8e4",
+      "#a8cbb4",
+      "#e8ce4d",
+      "#edacb9",
+      "#bea9da",
+      "#efb291"
+    ],
+    "tray_colors": [
+      "#a8cbb4",
+      "#e8ce4d",
+      "#78c8e4",
+      "#edacb9",
+      "#bea9da",
+      "#efb291"
+    ],
+    "color_status": "configurable visual variants; exact IKEA pack palette is not specified in the product text"
+  }
+}

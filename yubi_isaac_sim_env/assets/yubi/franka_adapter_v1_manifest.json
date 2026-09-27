@@ -1,0 +1,95 @@
+{
+  "repo": "https://github.com/Toyota/yubi-hw",
+  "tag": "v1.1.2",
+  "commit": "ce5a191c9189fbc057a808876a0daedef1519310",
+  "source_path": "STL/flange/FR_FLANGE.stl",
+  "source_url": "https://github.com/Toyota/yubi-hw/blob/v1.1.2/STL/flange/FR_FLANGE.stl",
+  "source_sha256": "7152fda1b5bc3963559762239ba8f0b512fd042d93c8d8ca6ec5e474b295e2aa",
+  "output_path": "franka_adapter_v1.stl",
+  "output_sha256": "29b3314020d5331baf50cc14adb886d19803d03d19569bb3e01d1ee4d980b0df",
+  "source_units": "mm",
+  "output_units": "m",
+  "output_frame": "v2 gripper G frame",
+  "transform": {
+    "yaw_deg": -90,
+    "translation_mm": [
+      0,
+      18,
+      2.5
+    ]
+  },
+  "bounds_m": [
+    -0.031455524265766144,
+    0.03150000050663948,
+    -0.014000000432133675,
+    0.05000000074505806,
+    0.0,
+    0.017000000923871994
+  ],
+  "notes": [
+    "M3 bolt pattern aligns with v2 BRACKET_GRIPPER STEP within source CAD tolerance.",
+    "No triangle intersections with v2 fixed STL at this pose.",
+    "Robot-facing Franka mating datum is not documented; verify Panda flange frame before hardware use."
+  ],
+  "hole_match": {
+    "v1_adapter_pilot_holes_native_mm": [
+      [
+        -13.5,
+        28.75
+      ],
+      [
+        -13.5,
+        -28.75
+      ],
+      [
+        10,
+        22
+      ],
+      [
+        10,
+        -22
+      ]
+    ],
+    "transformed_holes_gripper_G_mm": [
+      [
+        28.75,
+        31.5
+      ],
+      [
+        -28.75,
+        31.5
+      ],
+      [
+        22,
+        8
+      ],
+      [
+        -22,
+        8
+      ]
+    ],
+    "v2_bracket_gripper_holes_G_mm": [
+      [
+        28.75,
+        31.5
+      ],
+      [
+        -28.75,
+        31.5
+      ],
+      [
+        22,
+        8
+      ],
+      [
+        -22,
+        8
+      ]
+    ],
+    "center_residual_mm": 0.0
+  },
+  "validation": {
+    "vtk_exterior_triangle_intersections_at_pose": 0,
+    "probe_script": "tools/check_franka_adapter_fit.py"
+  }
+}

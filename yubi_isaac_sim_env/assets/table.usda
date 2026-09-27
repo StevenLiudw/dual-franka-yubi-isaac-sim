@@ -1,0 +1,136 @@
+#usda 1.0
+# Generated tabletop with package-specific, illustrative robot mount wings.
+# Robot mounts were not measured in the source videos. The wings are static
+# colliders continuous with the tabletop; both Franka bases remain world-fixed.
+(
+    defaultPrim = "Table"
+    metersPerUnit = 1
+    kilogramsPerUnit = 1
+    upAxis = "Z"
+)
+def Xform "Table"
+{
+    custom string real2sim:geometryStatus = "unverified; see scene.json provenance"
+    custom string real2sim:physicsStatus = "static collision approximation; friction unverified"
+    custom string real2sim:mountStatus = "illustrative support wings under dual Franka bases; not measured"
+
+    def Scope "Looks"
+    {
+        def Material "TableMaterial"
+        {
+            token outputs:surface.connect = </Table/Looks/TableMaterial/PreviewSurface.outputs:surface>
+            def Shader "PreviewSurface"
+            {
+                uniform token info:id = "UsdPreviewSurface"
+                color3f inputs:diffuseColor = (0.91, 0.92, 0.9)
+                token outputs:surface
+            }
+        }
+    }
+    def Xform "Visual"
+    {
+        def Cube "Top" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            double3 xformOp:translate = (0.0, 0.0, -0.0175)
+            float3 xformOp:scale = (0.41, 0.65, 0.0175)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            rel material:binding = </Table/Looks/TableMaterial>
+        }
+        def Cube "LeftRobotWing" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            double3 xformOp:translate = (-0.545, -0.455, -0.0175)
+            float3 xformOp:scale = (0.185, 0.155, 0.0175)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            rel material:binding = </Table/Looks/TableMaterial>
+        }
+        def Cube "RightRobotWing" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            double3 xformOp:translate = (-0.545, 0.455, -0.0175)
+            float3 xformOp:scale = (0.185, 0.155, 0.0175)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            rel material:binding = </Table/Looks/TableMaterial>
+        }
+        def Cube "LeftMountBracket" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            double3 xformOp:translate = (-0.43, -0.455, -0.085)
+            float3 xformOp:scale = (0.045, 0.125, 0.05)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            rel material:binding = </Table/Looks/TableMaterial>
+        }
+        def Cube "RightMountBracket" (
+            prepend apiSchemas = ["MaterialBindingAPI"]
+        )
+        {
+            double3 xformOp:translate = (-0.43, 0.455, -0.085)
+            float3 xformOp:scale = (0.045, 0.125, 0.05)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+            rel material:binding = </Table/Looks/TableMaterial>
+        }
+    }
+    def Xform "Collision"
+    {
+        def Cube "Top" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            token visibility = "invisible"
+            uniform token purpose = "guide"
+            bool physics:collisionEnabled = true
+            double3 xformOp:translate = (0.0, 0.0, -0.0175)
+            float3 xformOp:scale = (0.41, 0.65, 0.0175)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+        def Cube "LeftRobotWing" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            token visibility = "invisible"
+            uniform token purpose = "guide"
+            bool physics:collisionEnabled = true
+            double3 xformOp:translate = (-0.545, -0.455, -0.0175)
+            float3 xformOp:scale = (0.185, 0.155, 0.0175)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+        def Cube "RightRobotWing" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            token visibility = "invisible"
+            uniform token purpose = "guide"
+            bool physics:collisionEnabled = true
+            double3 xformOp:translate = (-0.545, 0.455, -0.0175)
+            float3 xformOp:scale = (0.185, 0.155, 0.0175)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+        def Cube "LeftMountBracket" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            token visibility = "invisible"
+            uniform token purpose = "guide"
+            bool physics:collisionEnabled = true
+            double3 xformOp:translate = (-0.43, -0.455, -0.085)
+            float3 xformOp:scale = (0.045, 0.125, 0.05)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+        def Cube "RightMountBracket" (
+            prepend apiSchemas = ["PhysicsCollisionAPI"]
+        )
+        {
+            token visibility = "invisible"
+            uniform token purpose = "guide"
+            bool physics:collisionEnabled = true
+            double3 xformOp:translate = (-0.43, 0.455, -0.085)
+            float3 xformOp:scale = (0.045, 0.125, 0.05)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:scale"]
+        }
+    }
+}

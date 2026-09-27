@@ -1,0 +1,50 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    kilogramsPerUnit = 1
+    metersPerUnit = 1
+    upAxis = "Z"
+)
+
+def Xform "World" (
+    prepend references = @random_000_seed_20260924.usda@
+)
+{
+    def Scope "Robots"
+    {
+        def Xform "LeftMount"
+        {
+            quatd xformOp:orient = (0.984726538905, 0, 0, 0.174108137594)
+            double3 xformOp:translate = (-0.53, -0.44, 0.75)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Xform "Panda" (
+                prepend references = @../assets/franka_yubi_panda.usdc@
+            )
+            {
+            }
+        }
+
+        def Xform "RightMount"
+        {
+            quatd xformOp:orient = (0.984726538905, 0, 0, -0.174108137594)
+            double3 xformOp:translate = (-0.53, 0.44, 0.75)
+            uniform token[] xformOpOrder = ["xformOp:translate", "xformOp:orient"]
+
+            def Xform "Panda" (
+                prepend references = @../assets/franka_yubi_panda.usdc@
+            )
+            {
+            }
+        }
+    }
+
+    over "PhysicsScene" (
+        prepend apiSchemas = ["PhysxSceneAPI"]
+    )
+    {
+        uniform token physxScene:broadphaseType = "GPU"
+        bool physxScene:enableGPUDynamics = 1
+    }
+}
+

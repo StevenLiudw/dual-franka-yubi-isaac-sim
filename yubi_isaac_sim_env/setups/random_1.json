@@ -1,0 +1,17 @@
+{
+  "name": "random:1",
+  "id": "random_001_seed_20260924",
+  "seed": 20260924,
+  "index": 1,
+  "cup_xy": [
+    0.050616,
+    -0.129932
+  ],
+  "tray_xy": [
+    -0.060198,
+    0.027261
+  ],
+  "cup_color": "#efb291",
+  "tray_color": "#78c8e4",
+  "placement_status": "seeded synthetic initial state; no depth or measured camera pose"
+}
