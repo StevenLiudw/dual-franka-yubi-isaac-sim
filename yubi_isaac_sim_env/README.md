@@ -45,6 +45,13 @@ Both wrists use the ELP-USBFHD01M-L180/OV2710 camera model. The nominal
 The simulator renders 640×480 RGB and samples recordings at 30 Hz by
 default. [wrist_camera_model.json](wrist_camera_model.json) contains fitted
 ideal fisheye intrinsics; it is not a calibration of either physical camera.
+The CAD constrains the lens center and forward axis, while a 180° roll about
+that axis sets image-up so the gripper enters from the bottom as it does in
+the five replay video sets. This roll is an image-convention estimate, not a
+measured mount angle. The replay uses human-held glove hardware; the motorized
+Franka-mounted YUBI and its downward home pose still produce a different
+foreground scale and table/background view. See
+[CAMERA_MOUNT_REPORT.md](CAMERA_MOUNT_REPORT.md).
 The head camera in [head_camera_calibration.json](head_camera_calibration.json)
 is also an estimate derived from tabletop video geometry.
 
@@ -70,8 +77,8 @@ GPU from the repository root:
 bash yubi_isaac_sim_env/pxr_python.sh -m yubi_isaac_sim_env.validate_assets
 ```
 
-GPU stepping,
-contact behavior, and all three RTX camera views still require a smoke test
-on the target NVIDIA workstation. The validator checks source hashes,
-relative USD dependencies, camera schemas, identical YUBI mounts, and GPU
-physics authoring.
+One-step headless GPU checks on an RTX 5080 rendered both wrist views with the
+YUBI at the bottom. Full-episode contact behavior, the head view, and visual
+agreement with the physical hardware still need validation. The validator
+checks source hashes, relative USD dependencies, camera schemas, identical
+YUBI mounts, and GPU physics authoring.

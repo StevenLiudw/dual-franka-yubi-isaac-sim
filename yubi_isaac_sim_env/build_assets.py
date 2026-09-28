@@ -228,8 +228,14 @@ def build() -> Path:
     mount = WRIST_CAMERA["nominal_mount_in_yubi_frame"]
     camera.AddTranslateOp(UsdGeom.XformOp.PrecisionDouble).Set(Gf.Vec3d(*mount["translation_m"]))
     angle = math.radians(mount["rotation_x_deg"]) / 2.0
+    roll = math.radians(mount["roll_about_optical_axis_deg"]) / 2.0
+    # CAD fixes the lens position and forward ray, but not which sensor edge
+    # appears at the top of the replay image. A local optical-axis roll keeps
+    # that forward ray while aligning both wrist views to the dataset.
+    forward_rotation = Gf.Quatd(math.cos(angle), math.sin(angle), 0.0, 0.0)
+    image_roll = Gf.Quatd(math.cos(roll), 0.0, 0.0, math.sin(roll))
     camera.AddOrientOp(UsdGeom.XformOp.PrecisionDouble).Set(
-        Gf.Quatd(math.cos(angle), math.sin(angle), 0.0, 0.0)
+        forward_rotation * image_roll
     )
     camera.CreateClippingRangeAttr(Gf.Vec2f(0.01, 100.0))
     camera.CreateFocalLengthAttr(float(WRIST_CAMERA["usd_focal_length_m"]) * 10.0)

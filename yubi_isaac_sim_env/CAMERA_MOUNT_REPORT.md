@@ -32,6 +32,32 @@ reference the same robot asset and use that same local camera transform.
 This establishes **identical nominal local camera mounting**, but no physical
 hand-eye measurement appears in the guide.
 
+## Replay image orientation
+
+All five provided replay sets show the hand hardware entering from the **bottom**
+of both wrist images. The original simulator camera used only `Rx(190°)` from
+the motorized assembly's lens-forward axis. That placed the simulated jaws at
+the **top** because the USD camera's image-up direction was opposite the replay
+convention. The STEP-derived lens center and forward ray do not establish
+which sensor edge is image-up, and the runner applies no wrist image rotation.
+
+The camera now uses `Rx(190°) · Rz(180°)` in the YUBI frame. The second rotation
+is around the camera's local optical axis: it moves the jaws to the bottom and
+reverses left/right image placement without changing the lens center, viewing
+ray, fisheye intrinsics, robot mount, or physics. One-step headless GPU renders
+of **both** wrist cameras showed the jaws at the bottom at 640 × 480. The
+validator checks the unchanged CAD forward ray and bottom-of-image tool sign.
+This 180° roll is a replay-alignment choice, not a measured physical sensor
+mount orientation.
+
+The remaining top-down appearance has a separate cause: the simulated Franka
+tools and CAD camera axes point toward the table at the home pose. The replay
+footage comes from human-held YUBI glove hardware at changing wrist poses and
+also includes the surrounding lab. The simulator instead uses the motorized
+YUBI gripper. Matching the replay's pitch, foreground size, and background
+requires measured wrist trajectories, camera extrinsics, and a closer scene;
+rotating the image cannot establish those from the videos alone.
+
 ## Flange evidence and alignment
 
 The guide links the v1.1.2 direct Franka `FR_FLANGE.stl`; this package uses

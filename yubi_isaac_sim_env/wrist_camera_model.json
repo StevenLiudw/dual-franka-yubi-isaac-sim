@@ -27,7 +27,8 @@
   "nominal_mount_in_yubi_frame": {
     "translation_m": [0.0, 0.05903, 0.05837],
     "rotation_x_deg": 190.0,
-    "status": "Optical center and axis estimated from official v2 motorized assembly STEP; validate with physical hand-eye calibration"
+    "roll_about_optical_axis_deg": 180.0,
+    "status": "Optical center and forward axis estimated from official v2 motorized assembly STEP. The 180 degree image roll aligns the simulated wrist image-up convention with all five replay sets; sensor roll was not measured from CAD. Validate each physical camera with hand-eye calibration."
   },
   "manufacturer_mjpeg_modes": [
     {"resolution_px": [1920, 1080], "max_fps": 30},

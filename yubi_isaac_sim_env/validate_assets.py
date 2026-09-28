@@ -32,6 +32,8 @@ def sha256(path: Path) -> str:
 def validate() -> dict:
     manifest = json.loads((ROOT / "assets" / "yubi" / "source_manifest.json").read_text())
     camera_model = json.loads((ROOT / "wrist_camera_model.json").read_text())
+    yubi_config = json.loads((ROOT / "config.json").read_text())["yubi"]
+    assembly = json.loads((ROOT / "assets" / "yubi" / "assembly_manifest.json").read_text())
     width, height = camera_model["render_resolution_px"]
     intrinsics = camera_model["intrinsics_px"]
     fov = camera_model["nominal_fov_deg"]
@@ -99,12 +101,22 @@ def validate() -> dict:
                 f"{side} wrist camera local translation mismatch")
         camera_quat = camera_local.ExtractRotationQuat()
         half_angle = math.radians(nominal_camera_mount["rotation_x_deg"]) / 2
-        camera_quat_expected = Gf.Quatd(math.cos(half_angle), math.sin(half_angle), 0, 0)
+        half_roll = math.radians(nominal_camera_mount["roll_about_optical_axis_deg"]) / 2
+        camera_quat_expected = (Gf.Quatd(math.cos(half_angle), math.sin(half_angle), 0, 0) *
+                                Gf.Quatd(math.cos(half_roll), 0, 0, math.sin(half_roll)))
         camera_dot = (camera_quat.GetReal() * camera_quat_expected.GetReal() +
                       sum(a * b for a, b in zip(camera_quat.GetImaginary(),
                                                 camera_quat_expected.GetImaginary())))
         require(abs(abs(camera_dot) - 1) < 1e-8,
                 f"{side} wrist camera local rotation mismatch")
+        forward = camera_local.TransformDir(Gf.Vec3d(0, 0, -1))
+        cad_forward = Gf.Vec3d(*assembly["camera"]["optical_forward_mount"])
+        require((forward - cad_forward).GetLength() < 1e-4,
+                f"{side} wrist camera no longer points along the CAD optical axis")
+        tool_in_camera = camera_local.GetInverse().Transform(
+            Gf.Vec3d(*yubi_config["tool_frame_xyz_m"]))
+        require(tool_in_camera[1] < 0 and tool_in_camera[2] < 0,
+                f"{side} YUBI tool is not below the camera image center")
         local_cameras.append((tuple(camera_local.ExtractTranslation()),
                               camera_quat.GetReal(), tuple(camera_quat.GetImaginary())))
         for name in ("panda_hand", "panda_leftfinger", "panda_rightfinger",

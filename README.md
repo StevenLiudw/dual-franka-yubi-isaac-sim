@@ -65,7 +65,7 @@ The build creates `yubi_isaac_sim_env/assets/franka_yubi_panda.usdc` from the lo
   --steps 100 --keep-open
 ```
 
-The GUI is the default. `--camera` selects `head`, `left_wrist`, `right_wrist`, or `overview` for the viewport and the single-camera recorder. The head view approximates the source center videos; the wrist views use a nominal ELP fisheye model. `--keep-open` keeps rendering after the episode until the window closes. `--headless` disables the GUI while retaining GPU physics and RTX image rendering.
+The GUI is the default. `--camera` selects `head`, `left_wrist`, `right_wrist`, or `overview` for the viewport and the single-camera recorder. The head view approximates the source center videos; the wrist views use a nominal ELP fisheye model. A 180° optical-axis roll places the YUBI at the bottom of each wrist view like the replay footage. This aligns image orientation, while the motorized gripper, robot pose, and unmodeled lab still differ from the human-held training footage. `--keep-open` keeps rendering after the episode until the window closes. `--headless` disables the GUI while retaining GPU physics and RTX image rendering.
 
 The runner uses a 60 Hz physics step, a 10 Hz policy step, and 30 Hz video and joint sampling by default. `--steps 100` therefore allows up to ten simulated seconds. An episode can finish earlier if the task success condition is met.
 
