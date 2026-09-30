@@ -5,7 +5,7 @@ dual-Franka/YUBI USD stage is open. Both arms receive joint-position targets;
 objects remain dynamic rigid bodies and are never moved by policy actions.
 ``reset`` teleports them only between episodes, then clears their velocities.
 
-The motorized YUBI uses one driven revolute jaw and one inverse mimic jaw.
+The motorized YUBI uses one normalized command for a mirrored revolute pair.
 ``q_closed_rad`` and ``q_open_rad`` must be calibrated for the motorized asset;
 the operator-side YUBI Xacro is not a source for physical actuation limits.
 """
@@ -17,6 +17,7 @@ import math
 from pathlib import Path
 from typing import Any, Callable
 
+from .command_conditioning import JointReferenceGovernor, get_joint_reference_profile
 from .setup_catalog import resolve_setup
 
 ROOT = Path(__file__).resolve().parent
@@ -30,6 +31,17 @@ ROBOT_PATHS = {
     "right": "/World/Robots/RightMount/Panda",
 }
 OBJECT_PATHS = {"cup": "/World/Objects/Cup", "plate": "/World/Objects/Tray"}
+COLLISION_POINT_RADII_M = {
+    "panda_link2": 0.08,
+    "panda_link3": 0.08,
+    "panda_link4": 0.08,
+    "panda_link5": 0.075,
+    "panda_link6": 0.07,
+    "panda_link7": 0.065,
+    "yubi_base": 0.055,
+    "yubi_leftfinger": 0.035,
+    "yubi_rightfinger": 0.035,
+}
 
 
 def as_list(value: Any) -> list:
@@ -56,8 +68,9 @@ class DualFrankaYubiCupPlateEnv:
 
     Omitted arms or keys keep their previous targets. The fraction maps
     linearly from calibrated ``q_closed_rad`` to ``q_open_rad`` for the driven
-    jaw. The other jaw is coupled by a PhysX mimic joint; it is not commanded
-    independently. This is joint-space control; no Cartesian IK or grasp
+    jaw. The simulator sends the inverse target to the other jaw; this models
+    the physical gear pair without changing the single-command hardware API.
+    This is joint-space control; no Cartesian IK or grasp
     planner is implied by the API.
     """
 
@@ -122,15 +135,16 @@ class DualFrankaYubiCupPlateEnv:
             )
         )
         for path in ROBOT_PATHS.values():
-            for link_name in ("yubi_base", "yubi_leftfinger", "yubi_rightfinger"):
+            for link_name in COLLISION_POINT_RADII_M:
                 if not self.stage.GetPrimAtPath(f"{path}/{link_name}").IsValid():
-                    raise RuntimeError(f"Required YUBI link missing: {path}/{link_name}")
+                    raise RuntimeError(f"Required collision link missing: {path}/{link_name}")
         self.robot_links = {
             side: {
                 part: self.world.scene.add(
                     RigidPrim(prim_paths_expr=f"{path}/{prim}", name=f"{side}_{part}_gpu")
                 )
                 for part, prim in (
+                    *((name, name) for name in COLLISION_POINT_RADII_M),
                     ("base", "yubi_base"),
                     ("left_finger", "yubi_leftfinger"),
                     ("right_finger", "yubi_rightfinger"),
@@ -167,10 +181,20 @@ class DualFrankaYubiCupPlateEnv:
             raise RuntimeError(f"Franka/YUBI joint names differ from expected: {self.dof_names}")
         self.dof_index = {name: self.dof_names.index(name) for name in expected}
         self.arm_dof_indices = [self.dof_index[name] for name in ARM_DOF_NAMES]
-        self.command_dof_indices = self.arm_dof_indices + [self.dof_index[DRIVEN_JAW_DOF_NAME]]
+        self.command_dof_indices = self.arm_dof_indices + [
+            self.dof_index[DRIVEN_JAW_DOF_NAME], self.dof_index[MIMIC_JAW_DOF_NAME]
+        ]
         # Isaac's articulation Jacobian excludes the fixed root body. A
         # separate rigid yubi_tool body may exist; otherwise use yubi_base.
         body_names = list(self.robots.body_names)
+        missing_collision_bodies = set(COLLISION_POINT_RADII_M) - set(body_names)
+        if missing_collision_bodies:
+            raise RuntimeError(f"Panda collision bodies missing from articulation: {missing_collision_bodies}")
+        self.collision_jacobian_indices = {
+            name: body_names.index(name) - 1 for name in COLLISION_POINT_RADII_M
+        }
+        if any(index < 0 for index in self.collision_jacobian_indices.values()):
+            raise RuntimeError("A collision link cannot be the articulation root")
         tool_views_exist = all("tool" in self.robot_links[side] for side in ROBOT_PATHS)
         self.tool_body_name = "yubi_tool" if "yubi_tool" in body_names and tool_views_exist else "yubi_base"
         if self.tool_body_name not in body_names:
@@ -189,7 +213,10 @@ class DualFrankaYubiCupPlateEnv:
             driven_low, driven_high = [float(v) for v in jaw_limits[row, driven_index]]
             mimic_low, mimic_high = [float(v) for v in jaw_limits[row, mimic_index]]
             for q in (self.q_closed_rad, self.q_open_rad):
-                if not (driven_low <= q <= driven_high and mimic_low <= -q <= mimic_high):
+                # USD degrees -> PhysX float32 radians can round 0.7 down by
+                # 1.2e-8. Allow conversion noise, not a meaningful overtravel.
+                if not (driven_low - 1e-6 <= q <= driven_high + 1e-6
+                        and mimic_low - 1e-6 <= -q <= mimic_high + 1e-6):
                     raise ValueError(
                         "Configured YUBI jaw endpoints exceed the USD joint limits "
                         f"(driven=[{driven_low}, {driven_high}], mimic=[{mimic_low}, {mimic_high}])"
@@ -209,6 +236,24 @@ class DualFrankaYubiCupPlateEnv:
         self.policy_steps = 0
         self.success_streak = 0
         self.scenario: dict | None = None
+        self.joint_command_profile = "direct"
+        self._joint_reference_governors: dict[str, JointReferenceGovernor] = {}
+        self._joint_reference_tick = 0
+        self.gripper_max_velocity_rad_s = float(yubi_config["grip_drive_max_velocity_rad_s"])
+        if not math.isfinite(self.gripper_max_velocity_rad_s) or self.gripper_max_velocity_rad_s <= 0:
+            raise ValueError("Invalid YUBI grip_drive_max_velocity_rad_s")
+
+    def configure_joint_command_profile(self, name: str) -> None:
+        """Select servo-rate command conditioning for subsequent episodes.
+
+        The selected profile uses that robot's official interface velocity,
+        acceleration, and jerk limits. The
+        NumPy governor is shared with hardware integrations and intentionally
+        does not change the policy or trajectory output contract.
+        """
+        get_joint_reference_profile(name)  # Validate before mutating state.
+        self.joint_command_profile = name
+        self._joint_reference_governors.clear()
 
     def _jaw_target(self, open_fraction: float) -> float:
         """Map a normalized aperture command to the calibrated driven-jaw angle."""
@@ -251,20 +296,45 @@ class DualFrankaYubiCupPlateEnv:
             seed=int(seed),
             scenario_index=scenario_index,
         )
+        reset_targets = self.home_targets.clone()
+        initial_joints = scenario.get("initial_arm_joint_rad", {})
+        if not isinstance(initial_joints, dict) or set(initial_joints) - set(ROBOT_PATHS):
+            raise ValueError("initial_arm_joint_rad must map left/right to seven joint angles")
+        for side, values in initial_joints.items():
+            if not isinstance(values, list) or len(values) != 7:
+                raise ValueError(f"{side} initial_arm_joint_rad needs seven radians")
+            for index, (value, bounds) in enumerate(zip(values, self.arm_joint_limits_rad[side])):
+                if not math.isfinite(value) or not bounds[0] <= value <= bounds[1]:
+                    raise ValueError(f"{side} initial joint {index + 1} is outside Panda limits")
+                reset_targets[self.robot_index[side], self.arm_dof_indices[index]] = value
+        initial_gripper = float(scenario.get("initial_gripper_open_fraction", self.home_open_fraction))
+        if not math.isfinite(initial_gripper) or not 0.0 <= initial_gripper <= 1.0:
+            raise ValueError("initial_gripper_open_fraction must be in [0, 1]")
+        initial_jaw_q = self._jaw_target(initial_gripper)
+        for row in self.robot_index.values():
+            reset_targets[row, self.dof_index[DRIVEN_JAW_DOF_NAME]] = initial_jaw_q
+            reset_targets[row, self.dof_index[MIMIC_JAW_DOF_NAME]] = -initial_jaw_q
         self.world.reset()
         zeros = self.torch.zeros_like(self.home_targets)
-        self.robots.set_joint_positions(self.home_targets)
+        self.robots.set_joint_positions(reset_targets)
         self.robots.set_joint_velocities(zeros)
-        # Position the mimic jaw at -q for reset, then command only the eight
-        # active DOFs. Writing a drive target to the mimic joint conflicts
-        # with its PhysX coupling constraint.
+        # Both simulated jaw drives receive mirrored targets. The physical
+        # YUBI adapter still receives one normalized actuator command.
         self.robots.apply_action(
             self.ArticulationActions(
-                joint_positions=self.home_targets[:, self.command_dof_indices],
+                joint_positions=reset_targets[:, self.command_dof_indices],
                 joint_indices=self.command_dof_indices,
             )
         )
-        self.current_targets = self.home_targets.clone()
+        self.current_targets = reset_targets.clone()
+        profile = get_joint_reference_profile(self.joint_command_profile)
+        self._joint_reference_governors.clear()
+        self._joint_reference_tick = 0
+        if profile is not None:
+            for side, row in self.robot_index.items():
+                governor = JointReferenceGovernor(profile, dt_s=profile.servo_period_s)
+                governor.reset(as_list(reset_targets[row, self.arm_dof_indices]))
+                self._joint_reference_governors[side] = governor
         # Advance the articulation once before installing the randomized rigid
         # bodies. Otherwise this step can move the freshly placed cup/plate.
         self.world.step(render=self.render)
@@ -326,6 +396,17 @@ class DualFrankaYubiCupPlateEnv:
                     positions[index][self.dof_index[MIMIC_JAW_DOF_NAME]]
                 ),
                 "gripper_open_fraction": open_fraction,
+                "collision_points": [
+                    {
+                        "name": name,
+                        "position_m": link_poses[name]["position_m"],
+                        "radius_m": radius,
+                        "arm_translation_jacobian": as_list(
+                            jacobians[index, self.collision_jacobian_indices[name], :3, self.arm_dof_indices]
+                        ),
+                    }
+                    for name, radius in COLLISION_POINT_RADII_M.items()
+                ],
             }
         return {
             "objects": objects,
@@ -359,6 +440,7 @@ class DualFrankaYubiCupPlateEnv:
         action: dict,
         *,
         on_physics_step: Callable[[int], None] | None = None,
+        interpolate_targets: bool = False,
     ) -> tuple[dict, float, bool, bool, dict]:
         """Advance one policy period and optionally observe each physics step.
 
@@ -368,6 +450,8 @@ class DualFrankaYubiCupPlateEnv:
         """
         if self.scenario is None:
             raise RuntimeError("Call reset before step")
+        if interpolate_targets and self.joint_command_profile != "direct":
+            raise ValueError("Choose either linear target interpolation or a joint command profile")
         targets = self.current_targets.clone()
         for side, command in action.items():
             if side not in self.robot_index or not isinstance(command, dict):
@@ -394,14 +478,65 @@ class DualFrankaYubiCupPlateEnv:
         )
         targets[:, self.command_dof_indices] = controlled
         targets[:, self.dof_index[MIMIC_JAW_DOF_NAME]] = -targets[:, self.dof_index[DRIVEN_JAW_DOF_NAME]]
-        self.robots.apply_action(
-            self.ArticulationActions(
-                joint_positions=controlled,
-                joint_indices=self.command_dof_indices,
-            )
-        )
         self.current_targets = targets
+        conditioned_targets = self.joint_command_profile != "direct"
+        if interpolate_targets or conditioned_targets:
+            start = self.torch.as_tensor(
+                self.robots.get_joint_positions(), dtype=controlled.dtype, device=self.device
+            )[:, self.command_dof_indices].clone()
+        else:
+            self.robots.apply_action(
+                self.ArticulationActions(
+                    joint_positions=controlled,
+                    joint_indices=self.command_dof_indices,
+                )
+            )
         for substep in range(1, self.control_decimation + 1):
+            if conditioned_targets:
+                intermediate = controlled.clone()
+                # The arm reference governor is identical for simulation and
+                # hardware. The normalized YUBI jaw is velocity-limited by the
+                # XM430-W350-R 12 V no-load speed and mirrored explicitly.
+                elapsed = substep / float(self.task_config["physics_hz"])
+                jaw_delta = self.torch.clamp(
+                    controlled[:, -2] - start[:, -2],
+                    min=-self.gripper_max_velocity_rad_s * elapsed,
+                    max=self.gripper_max_velocity_rad_s * elapsed,
+                )
+                intermediate[:, -2] = start[:, -2] + jaw_delta
+                intermediate[:, -1] = -intermediate[:, -2]
+                profile = get_joint_reference_profile(self.joint_command_profile)
+                assert profile is not None
+                physics_step = self.policy_steps * self.control_decimation + substep
+                target_tick = round(
+                    physics_step / (float(self.task_config["physics_hz"]) * profile.servo_period_s)
+                )
+                for side, row in self.robot_index.items():
+                    desired = as_list(controlled[row, : len(ARM_DOF_NAMES)])
+                    governed = None
+                    for _ in range(target_tick - self._joint_reference_tick):
+                        governed = self._joint_reference_governors[side].update(desired)
+                    if governed is None:
+                        governed = self._joint_reference_governors[side].position.copy()
+                    intermediate[row, : len(ARM_DOF_NAMES)] = self.torch.as_tensor(
+                        governed, dtype=controlled.dtype, device=self.device
+                    )
+                self._joint_reference_tick = target_tick
+                self.robots.apply_action(
+                    self.ArticulationActions(
+                        joint_positions=intermediate,
+                        joint_indices=self.command_dof_indices,
+                    )
+                )
+            elif interpolate_targets:
+                alpha = substep / self.control_decimation
+                intermediate = start + alpha * (controlled - start)
+                self.robots.apply_action(
+                    self.ArticulationActions(
+                        joint_positions=intermediate,
+                        joint_indices=self.command_dof_indices,
+                    )
+                )
             self.world.step(render=self.render)
             if on_physics_step is not None:
                 on_physics_step(substep)

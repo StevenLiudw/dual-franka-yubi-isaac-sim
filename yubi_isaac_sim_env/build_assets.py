@@ -23,7 +23,8 @@ ASSETS = ROOT / "assets"
 MESHES = ASSETS / "yubi" / "meshes"
 OUTPUT = ASSETS / "franka_yubi_panda.usdc"
 SCENE = ROOT / "scenes" / "dual_franka_yubi_random_000_seed_20260924.usda"
-CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))["yubi"]
+TASK_CONFIG = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
+CONFIG = TASK_CONFIG["yubi"]
 WRIST_CAMERA = json.loads((ROOT / "wrist_camera_model.json").read_text(encoding="utf-8"))
 
 # These are initial dynamics estimates, not measured hardware properties.
@@ -144,6 +145,27 @@ def build() -> Path:
     panda.GetPrim().GetReferences().AddReference("franka_panda/franka_panda.usd")
     stage.SetDefaultPrim(panda.GetPrim())
 
+    # The stock Panda asset uses acceleration drives with K=625 and D=0.  The
+    # zero damping lets a 10 Hz replay target excite joint oscillation, even
+    # when the target trajectory itself is smooth.  Author a higher-bandwidth,
+    # well-damped local drive so each 100 ms waypoint interval settles without
+    # adding replay delay.  This leaves the vendored NVIDIA asset untouched.
+    panda_drive = TASK_CONFIG["panda_joint_drive"]
+    for joint_number in range(1, 8):
+        joint = stage.GetPrimAtPath(f"/panda/joints/panda_joint{joint_number}")
+        if not joint.IsValid():
+            raise RuntimeError(f"Stock Panda joint {joint_number} is missing")
+        drive = UsdPhysics.DriveAPI.Get(joint, "angular")
+        if not drive:
+            raise RuntimeError(f"Stock Panda joint {joint_number} has no angular drive")
+        stiffness = drive.GetStiffnessAttr().Get()
+        if abs(stiffness - panda_drive["source_stiffness_s_inv2"]) > 1e-6:
+            raise RuntimeError(
+                f"Unexpected Panda joint stiffness {stiffness}; refusing stale damping tuning"
+            )
+        drive.GetStiffnessAttr().Set(panda_drive["stiffness_s_inv2"])
+        drive.GetDampingAttr().Set(panda_drive["damping_s_inv"])
+
     # The source Franka remains untouched. These stronger local opinions remove
     # its hand and sliders only in this derived YUBI-equipped robot asset.
     for path in (
@@ -199,19 +221,22 @@ def build() -> Path:
 
     driven = _jaw_joint(stage, "yubi_finger_joint", "/panda/yubi_leftfinger",
                         PIVOTS_M["left"], Q_CLOSED_DEG, Q_OPEN_DEG)
-    drive = UsdPhysics.DriveAPI.Apply(driven.GetPrim(), "angular")
-    drive.CreateTypeAttr("force")
-    drive.CreateStiffnessAttr(0.01)  # USD Nm/degree, estimated control tuning.
-    drive.CreateDampingAttr(0.001)
-    drive.CreateMaxForceAttr(CONFIG["grip_drive_max_force_Nm"])
-    drive.CreateTargetPositionAttr(Q_CLOSED_DEG)
-    mimic_joint = _jaw_joint(stage, "yubi_finger_mimic_joint", "/panda/yubi_rightfinger",
-                             PIVOTS_M["right"], -Q_OPEN_DEG, -Q_CLOSED_DEG)
-    mimic = PhysxSchema.PhysxMimicJointAPI.Apply(mimic_joint.GetPrim(), "rotY")
-    mimic.CreateReferenceJointRel().SetTargets([driven.GetPath()])
-    mimic.CreateReferenceJointAxisAttr("rotY")
-    mimic.CreateGearingAttr(-1.0)
-    mimic.CreateOffsetAttr(0.0)
+    mirrored = _jaw_joint(stage, "yubi_finger_mimic_joint", "/panda/yubi_rightfinger",
+                          PIVOTS_M["right"], -Q_OPEN_DEG, -Q_CLOSED_DEG)
+    # PhysX 5.1's articulation mimic constraint can lock this pair at the
+    # shared zero stop when its limits have opposite signs.  Drive both sides
+    # from the same normalized command instead.  The environment always sends
+    # q and -q together, preserving the one-actuator hardware API while making
+    # the simulated gearing deterministic.  Split the motor torque clamp over
+    # the two simulated drives so their combined clamp remains XM430-sized.
+    for joint, target in ((driven, Q_CLOSED_DEG), (mirrored, -Q_CLOSED_DEG)):
+        drive = UsdPhysics.DriveAPI.Apply(joint.GetPrim(), "angular")
+        drive.CreateTypeAttr("force")
+        drive.CreateStiffnessAttr(CONFIG["grip_drive_stiffness_Nm_per_rad"])
+        drive.CreateDampingAttr(CONFIG["grip_drive_damping_Nm_s_per_rad"])
+        drive.CreateMaxForceAttr(CONFIG["grip_drive_max_force_Nm"] / 2.0)
+        drive.CreateTargetPositionAttr(target)
+    mirrored.GetPrim().SetCustomDataByKey("yubi:mirrorsJoint", "yubi_finger_joint")
     # The geared jaws can touch each other at the closed stop. Filter only
     # their mutual collision; both remain collidable with the cup and plate.
     UsdPhysics.FilteredPairsAPI.Apply(stage.GetPrimAtPath("/panda/yubi_leftfinger")) \
@@ -260,7 +285,10 @@ def build() -> Path:
     camera_prim.SetCustomDataByKey("yubi:cameraStatus", WRIST_CAMERA["intrinsics_status"])
     camera_prim.SetCustomDataByKey("yubi:cameraModel", WRIST_CAMERA["model"])
     panda.GetPrim().SetCustomDataByKey("yubi:sourceTag", "Toyota/yubi-hw v2.0.0 motorized gripper and v1.1.2 direct Franka flange")
-    panda.GetPrim().SetCustomDataByKey("yubi:physicsStatus", "provisional masses, friction, jaw limits")
+    panda.GetPrim().SetCustomDataByKey(
+        "yubi:physicsStatus",
+        "provisional masses, friction, jaw limits; damped Panda acceleration drives",
+    )
     stage.GetRootLayer().Save()
 
     # A composition check catches broken relative references and inactive

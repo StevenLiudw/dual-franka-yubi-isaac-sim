@@ -38,6 +38,7 @@ def create_sim(
     setup: str | Path | dict | None = None,
     seed: int = 20260924,
     scenario_index: int = 0,
+    head_camera_calibration: str | Path | None = None,
 ) -> tuple[object, DualFrankaYubiCupPlateEnv]:
     """Launch Isaac Sim with GPU physics and return ``(app, env)``.
 
@@ -65,7 +66,8 @@ def create_sim(
     if not context.open_stage(str(scene_path)):
         app.close()
         raise RuntimeError(f"Isaac Sim could not open YUBI scene: {scene_path}")
-    configure_head_camera(context.get_stage())
+    from .head_camera import load_head_camera_calibration
+    configure_head_camera(context.get_stage(), load_head_camera_calibration(head_camera_calibration))
     for _ in range(10):
         app.update()
     env = DualFrankaYubiCupPlateEnv(render=gui)

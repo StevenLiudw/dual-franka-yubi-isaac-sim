@@ -1,0 +1,24 @@
+#usda 1.0
+(
+    defaultPrim = "World"
+    metersPerUnit = 1
+    upAxis = "Z"
+    subLayers = [@dual_franka_yubi_random_000_seed_20260924.usda@]
+)
+
+over "World"
+{
+    over "Robots"
+    {
+        over "LeftMount"
+        {
+            quatd xformOp:orient = (0.984726538905, 0, 0, -0.174108137594)
+            double3 xformOp:translate = (-0.53, 0.44, 0.75)
+        }
+        over "RightMount"
+        {
+            quatd xformOp:orient = (0.984726538905, 0, 0, 0.174108137594)
+            double3 xformOp:translate = (-0.53, -0.44, 0.75)
+        }
+    }
+}

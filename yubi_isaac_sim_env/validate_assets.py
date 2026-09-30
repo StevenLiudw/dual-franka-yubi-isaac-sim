@@ -32,7 +32,9 @@ def sha256(path: Path) -> str:
 def validate() -> dict:
     manifest = json.loads((ROOT / "assets" / "yubi" / "source_manifest.json").read_text())
     camera_model = json.loads((ROOT / "wrist_camera_model.json").read_text())
-    yubi_config = json.loads((ROOT / "config.json").read_text())["yubi"]
+    task_config = json.loads((ROOT / "config.json").read_text())
+    yubi_config = task_config["yubi"]
+    panda_drive_config = task_config["panda_joint_drive"]
     assembly = json.loads((ROOT / "assets" / "yubi" / "assembly_manifest.json").read_text())
     width, height = camera_model["render_resolution_px"]
     intrinsics = camera_model["intrinsics_px"]
@@ -72,6 +74,18 @@ def validate() -> dict:
 
         root_joint = prim("root_joint")
         require(root_joint.HasAPI(UsdPhysics.ArticulationRootAPI), f"{side} articulation root missing")
+        for joint_number in range(1, 8):
+            arm_joint = prim(f"joints/panda_joint{joint_number}")
+            drive = UsdPhysics.DriveAPI.Get(arm_joint, "angular")
+            require(bool(drive), f"{side} Panda joint {joint_number} angular drive missing")
+            require(drive.GetTypeAttr().Get() == "acceleration",
+                    f"{side} Panda joint {joint_number} drive type changed")
+            require(abs(drive.GetStiffnessAttr().Get() -
+                        panda_drive_config["stiffness_s_inv2"]) < 1e-6,
+                    f"{side} Panda joint {joint_number} stiffness mismatch")
+            require(abs(drive.GetDampingAttr().Get() -
+                        panda_drive_config["damping_s_inv"]) < 1e-6,
+                    f"{side} Panda joint {joint_number} damping mismatch")
         link8 = prim("panda_link8")
         base = prim("yubi_base")
         for name in ("yubi_leftfinger", "yubi_rightfinger", "yubi_tool"):
@@ -147,10 +161,20 @@ def validate() -> dict:
         mimic = UsdPhysics.RevoluteJoint(prim("joints/yubi_finger_mimic_joint"))
         require(driven.GetAxisAttr().Get() == "Y" and mimic.GetAxisAttr().Get() == "Y",
                 f"{side} jaw hinge axis mismatch")
-        require(abs(driven.GetUpperLimitAttr().Get() - 34.3774677) < 1e-3,
+        require(abs(driven.GetUpperLimitAttr().Get() - math.degrees(yubi_config["q_open_rad"])) < 1e-3,
                 f"{side} jaw opening limit mismatch")
+        require(abs(driven.GetLowerLimitAttr().Get() - math.degrees(yubi_config["q_closed_rad"])) < 1e-3,
+                f"{side} jaw closing limit mismatch")
         require(mimic.GetLowerLimitAttr().Get() == -driven.GetUpperLimitAttr().Get(),
                 f"{side} mimic joint lower limit mismatch")
+        require(mimic.GetUpperLimitAttr().Get() == -driven.GetLowerLimitAttr().Get(),
+                f"{side} mimic joint upper limit mismatch")
+        for name in ("yubi_finger_joint", "yubi_finger_mimic_joint"):
+            jaw_prim = prim(f"joints/{name}")
+            drive = UsdPhysics.DriveAPI.Get(jaw_prim, "angular")
+            require(bool(drive), f"{side} {name} angular drive missing")
+        require(prim("joints/yubi_finger_mimic_joint").GetCustomDataByKey("yubi:mirrorsJoint") ==
+                "yubi_finger_joint", f"{side} mirrored jaw metadata missing")
         # The adapter mating plane is +18 mm Y, +2.5 mm Z in the YUBI frame.
         # It must coincide with the stock Franka flange center. YUBI +Z
         # points down at rest, and its central pilot enters the flange recess.
@@ -180,6 +204,7 @@ def validate() -> dict:
             "wrist_identical_local_mounts": True,
             "yubi_mount_yaw_link8_deg": 90,
             "identical_local_mounts": True,
+            "panda_joint_drive_damping_s_inv": panda_drive_config["damping_s_inv"],
             "gpu_settings_authored": True}
 
 

@@ -26,7 +26,13 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from yubi_isaac_sim_env import create_sim, resolve_scene
+from yubi_isaac_sim_env.command_conditioning import (
+    JOINT_REFERENCE_PROFILES,
+    get_joint_reference_profile,
+)
+from yubi_isaac_sim_env.interarm_guard import observed_interarm_clearance_m
 from yubi_isaac_sim_env.recording import JointStateWriter, VideoWriter
+from yubi_isaac_sim_env.policy_adapter import TRAJECTORY_EXECUTOR_PROFILES
 
 
 PACKAGE_DIR = Path(__file__).resolve().parent
@@ -37,9 +43,10 @@ HEAD_CALIBRATION_PATH = PACKAGE_DIR / "head_camera_calibration.json"
 WRIST_CAMERA_MODEL_PATH = PACKAGE_DIR / "wrist_camera_model.json"
 
 
-def _camera_spec(name: str) -> dict:
+def _camera_spec(name: str, head_calibration: Path | None = None) -> dict:
     if name == "head":
-        calibration = json.loads(HEAD_CALIBRATION_PATH.read_text(encoding="utf-8"))
+        calibration_path = head_calibration or HEAD_CALIBRATION_PATH
+        calibration = json.loads(calibration_path.read_text(encoding="utf-8"))
         return {"name": "head", "prim_path": calibration["camera_path"],
                 "resolution": calibration["resolution_px"],
                 "eye_m": calibration["eye_world_m"],
@@ -49,7 +56,7 @@ def _camera_spec(name: str) -> dict:
                 "focal_length_m": calibration["focal_length_m"],
                 "horizontal_aperture_m": calibration["horizontal_aperture_m"],
                 "horizontal_flip_for_dataset": calibration["horizontal_flip_for_dataset"],
-                "calibration_file": str(HEAD_CALIBRATION_PATH)}
+                "calibration_file": str(calibration_path)}
     if name in ("left_wrist", "right_wrist"):
         side = "LeftMount" if name == "left_wrist" else "RightMount"
         model = json.loads(WRIST_CAMERA_MODEL_PATH.read_text(encoding="utf-8"))
@@ -282,6 +289,21 @@ def _policy_observation(state: dict, cameras: dict, specs: dict, world) -> dict:
     return {**state, "images": images, "image_metadata": metadata}
 
 
+def _spatial_alignment_state(observation: dict, side: str = "right") -> dict:
+    """Compact omniscient state for replay/object alignment diagnostics."""
+    robot = observation["robots"][side]
+    links = robot["link_poses"]
+    left = np.asarray(links["left_finger"]["position_m"], dtype=np.float64)
+    right = np.asarray(links["right_finger"]["position_m"], dtype=np.float64)
+    return {
+        "cup_position_m": observation["objects"]["cup"]["position_m"],
+        "cup_quaternion_wxyz": observation["objects"]["cup"]["quaternion_wxyz"],
+        "tool_position_m": robot["tool_pose"]["position_m"],
+        "finger_body_midpoint_m": ((left + right) * 0.5).tolist(),
+        "gripper_open_fraction": robot["gripper_open_fraction"],
+    }
+
+
 def _sample(video: VideoWriter | None, joints: JointStateWriter | None, camera, world,
             spec: dict, episode: int, sample_index: int, phase: str, policy_step: int,
             observation: dict) -> None:
@@ -328,16 +350,33 @@ def _parse_args(argv: list[str] | None = None):
     parser.add_argument("--policy-script", help="Python file exporting act(observation, step, episode)")
     parser.add_argument("--trajectory-policy-script",
                         help="Python file exporting predict(observation, step, episode) -> world-frame tool waypoint chunk")
+    parser.add_argument(
+        "--trajectory-controller-profile",
+        choices=tuple(TRAJECTORY_EXECUTOR_PROFILES),
+        default="default",
+        help="Differential-IK tuning shared by simulation and hardware trajectory adapters",
+    )
     parser.add_argument("--policy-images", choices=("none", "all"), default="none",
                         help="Pass head and both wrist RGB arrays to a custom policy (default: state only)")
+    parser.add_argument("--head-camera-calibration", type=Path, help="Optional estimated/measured head-camera JSON")
     parser.add_argument("--headless", action="store_true", help="Disable GUI window, retaining GPU physics and RTX recording")
     parser.add_argument("--linger-seconds", type=float, help="Keep the GUI visible this long after the run (default: 5)")
     parser.add_argument("--keep-open", action="store_true", help="Keep rendering the GUI until its window is closed")
+    parser.add_argument("--continue-after-success", action="store_true",
+                        help="Continue recording through --steps after success; preserve success events in the report")
     parser.add_argument("--record-run", type=Path, help="Shortcut: capture MP4, joint CSV, manifest, and report in DIR")
     parser.add_argument("--record-video", type=Path, help="Capture rendered camera MP4")
     parser.add_argument("--record-joints", type=Path, help="Capture named joint position and velocity CSV")
     parser.add_argument("--record-fps", type=int, default=30,
                         help="Camera/joint samples per simulated second (default: 30, matching source videos)")
+    parser.add_argument("--interpolate-targets", action="store_true",
+                        help="Linearly interpolate each 10 Hz joint target over the six 60 Hz physics steps")
+    parser.add_argument(
+        "--joint-command-profile",
+        choices=("direct", *JOINT_REFERENCE_PROFILES),
+        default="direct",
+        help="Servo-rate joint reference conditioning shared with hardware integrations",
+    )
     parser.add_argument("--report", type=Path, help="Write JSON episode report (automatic with --record-run)")
     args = parser.parse_args(argv)
     if args.episodes < 1 or args.steps < 1 or args.index_start < 0 or (args.fixed_index is not None and args.fixed_index < 0):
@@ -348,6 +387,10 @@ def _parse_args(argv: list[str] | None = None):
         parser.error("--keep-open requires the GUI")
     if args.policy_script and args.trajectory_policy_script:
         parser.error("Choose one of --policy-script and --trajectory-policy-script")
+    if args.interpolate_targets and args.joint_command_profile != "direct":
+        parser.error("Choose one of --interpolate-targets and --joint-command-profile")
+    if args.trajectory_controller_profile == "panda-pose-replay" and args.joint_command_profile != "franka-panda-interface":
+        parser.error("panda-pose-replay requires --joint-command-profile franka-panda-interface")
     if args.policy_images == "all" and not (args.policy_script or args.trajectory_policy_script):
         parser.error("--policy-images all requires a custom policy script")
     if args.record_run and (args.record_video or args.record_joints or args.report):
@@ -387,7 +430,13 @@ def main(argv: list[str] | None = None) -> int:
     policy = None
     trajectory_executor = None
     config = json.loads((PACKAGE_DIR / "config.json").read_text(encoding="utf-8"))
+    robot_model = str(config.get("robot_model", "unknown"))
     policy_fps = int(config["policy_hz"])
+    from yubi_isaac_sim_env.policy_adapter import trajectory_executor_profile
+    trajectory_controller = {
+        "name": args.trajectory_controller_profile,
+        **trajectory_executor_profile(args.trajectory_controller_profile),
+    }
     physics_fps = int(config["physics_hz"])
     record_fps = int(args.record_fps)
     if record_fps <= 0 or physics_fps % record_fps or record_fps % policy_fps:
@@ -397,7 +446,8 @@ def main(argv: list[str] | None = None) -> int:
         )
     capture_interval = physics_fps // record_fps
     video_enabled = args.record_run is not None or args.record_video is not None
-    camera_spec = _camera_spec(args.camera)
+    head_calibration = args.head_camera_calibration.expanduser().resolve() if args.head_camera_calibration else None
+    camera_spec = _camera_spec(args.camera, head_calibration)
     camera_width, camera_height = camera_spec["resolution"]
     report_path = args.record_run / "report.json" if args.record_run else args.report
     manifest_path = args.record_run / "manifest.json" if args.record_run else None
@@ -411,9 +461,17 @@ def main(argv: list[str] | None = None) -> int:
         "policy": str(policy_path) if policy_path else args.policy,
         "policy_input_views": ["head", "left_wrist", "right_wrist"] if args.policy_images == "all" else [],
         "policy_output": "world_tool_waypoint_chunks" if args.trajectory_policy_script else "joint_targets",
+        "robot_model": robot_model,
+        "trajectory_controller_profile": trajectory_controller,
         "backend": None,
         "camera": camera_spec,
         "record_fps": record_fps,
+        "interpolate_targets": args.interpolate_targets,
+        "joint_command_profile": (
+            get_joint_reference_profile(args.joint_command_profile).as_dict()
+            if args.joint_command_profile != "direct"
+            else {"name": "direct"}
+        ),
         "episodes": [],
     }
     input_paths = [
@@ -424,11 +482,15 @@ def main(argv: list[str] | None = None) -> int:
         PACKAGE_DIR / "scene_config.json",
     ]
     if args.camera == "head" or args.policy_images == "all":
-        input_paths.append(HEAD_CALIBRATION_PATH)
+        input_paths.append(head_calibration or HEAD_CALIBRATION_PATH)
     if args.camera in ("left_wrist", "right_wrist") or args.policy_images == "all":
         input_paths.append(WRIST_CAMERA_MODEL_PATH)
     if policy_path is not None:
         input_paths.append(policy_path)
+    if args.trajectory_policy_script:
+        input_paths.append(PACKAGE_DIR / "policy_adapter.py")
+    if args.joint_command_profile != "direct":
+        input_paths.append(PACKAGE_DIR / "command_conditioning.py")
     setup_file = _setup_file(args.setup)
     if setup_file is not None:
         input_paths.append(setup_file)
@@ -440,10 +502,18 @@ def main(argv: list[str] | None = None) -> int:
         "policy": str(policy_path) if policy_path else args.policy,
         "policy_input_views": ["head", "left_wrist", "right_wrist"] if args.policy_images == "all" else [],
         "policy_output": "world_tool_waypoint_chunks" if args.trajectory_policy_script else "joint_targets",
+        "robot_model": robot_model,
+        "trajectory_controller_profile": trajectory_controller,
         "sampling": f"reset state plus one sample every {capture_interval} physics frames",
         "frame_alignment": "video frame n corresponds to joint CSV sample_index n within each episode",
         "video_fps": record_fps,
         "policy_fps": policy_fps,
+        "interpolate_targets": args.interpolate_targets,
+        "joint_command_profile": (
+            get_joint_reference_profile(args.joint_command_profile).as_dict()
+            if args.joint_command_profile != "direct"
+            else {"name": "direct"}
+        ),
         "camera": camera_spec,
         "input_sha256": {str(path): _hash(path) for path in input_paths},
         "episodes": [],
@@ -451,6 +521,7 @@ def main(argv: list[str] | None = None) -> int:
     app = None
     env = None
     exit_code = 1
+    current_step = None
     try:
         app, env = create_sim(
             scene=scene_path,
@@ -458,17 +529,24 @@ def main(argv: list[str] | None = None) -> int:
             setup=args.setup,
             seed=args.seed,
             scenario_index=args.fixed_index if args.fixed_index is not None else args.index_start,
+            head_camera_calibration=head_calibration,
         )
         report["backend"] = env.backend
+        env.configure_joint_command_profile(args.joint_command_profile)
         if env.control_decimation % capture_interval:
             raise RuntimeError("Recording interval does not divide a policy step")
         # Isaac/Omniverse modules imported by a custom policy need Kit ready.
         if policy_path is not None:
             policy = _load_callable(policy_path, "predict" if args.trajectory_policy_script else "act")
         if args.trajectory_policy_script:
-            from yubi_isaac_sim_env.policy_adapter import TrajectoryChunkExecutor
-            trajectory_executor = TrajectoryChunkExecutor(policy_hz=policy_fps)
-        policy_specs = ({name: _camera_spec(name) for name in ("head", "left_wrist", "right_wrist")}
+            from yubi_isaac_sim_env.policy_adapter import (
+                TrajectoryChunkExecutor,
+            )
+            trajectory_executor = TrajectoryChunkExecutor(
+                policy_hz=policy_fps,
+                **trajectory_executor_profile(args.trajectory_controller_profile),
+            )
+        policy_specs = ({name: _camera_spec(name, head_calibration) for name in ("head", "left_wrist", "right_wrist")}
                         if args.policy_images == "all" else {})
         camera = _make_camera(camera_spec, gui=not args.headless,
                               recording_video=video_enabled or args.camera in policy_specs)
@@ -498,6 +576,7 @@ def main(argv: list[str] | None = None) -> int:
             }
             manifest["episodes"].append(entry)
             initial = observation
+            min_observed_interarm_clearance_m = observed_interarm_clearance_m(observation)
             transitions = []
             video = None
             joints = None
@@ -507,6 +586,7 @@ def main(argv: list[str] | None = None) -> int:
                 _sample(video, joints, camera, env.world, camera_spec, episode, 0, "reset", -1, observation)
                 sample_index = 0
                 for step in range(args.steps):
+                    current_step = step
                     policy_observation = (_policy_observation(observation, policy_cameras, policy_specs, env.world)
                                           if policy_specs else observation)
                     if trajectory_executor is not None:
@@ -516,17 +596,30 @@ def main(argv: list[str] | None = None) -> int:
                             observation, step, args.policy
                         )
                     def capture(physics_substep: int) -> None:
-                        nonlocal sample_index
+                        nonlocal sample_index, min_observed_interarm_clearance_m
                         if physics_substep % capture_interval:
                             return
                         sample_index += 1
-                        frame_observation = env.observe() if joints is not None else observation
+                        frame_observation = (env.observe() if joints is not None or trajectory_executor is not None
+                                             else observation)
+                        clearance = observed_interarm_clearance_m(frame_observation)
+                        if clearance is not None:
+                            min_observed_interarm_clearance_m = min(
+                                min_observed_interarm_clearance_m, clearance
+                            ) if min_observed_interarm_clearance_m is not None else clearance
                         _sample(video, joints, camera, env.world, camera_spec,
                                 episode, sample_index, "step", step, frame_observation)
 
                     observation, reward, terminated, truncated, info = env.step(
-                        action, on_physics_step=capture if (video is not None or joints is not None) else None
+                        action,
+                        on_physics_step=capture if (video is not None or joints is not None) else None,
+                        interpolate_targets=args.interpolate_targets,
                     )
+                    clearance = observed_interarm_clearance_m(observation)
+                    if clearance is not None:
+                        min_observed_interarm_clearance_m = min(
+                            min_observed_interarm_clearance_m, clearance
+                        ) if min_observed_interarm_clearance_m is not None else clearance
                     transitions.append(
                         {
                             "policy_step": step,
@@ -536,9 +629,13 @@ def main(argv: list[str] | None = None) -> int:
                             "terminated": terminated,
                             "truncated": truncated,
                             "is_success": info["is_success"],
+                            "spatial_alignment": _spatial_alignment_state(observation),
+                            "tool_poses": {side: robot["tool_pose"] for side, robot in observation["robots"].items()},
+                            "interarm_guard": (trajectory_executor.last_interarm_guard
+                                               if trajectory_executor is not None else {"active": False}),
                         }
                     )
-                    if terminated or truncated or not app.is_running():
+                    if (terminated and not args.continue_after_success) or truncated or not app.is_running():
                         break
             finally:
                 if joints is not None:
@@ -549,10 +646,15 @@ def main(argv: list[str] | None = None) -> int:
                     entry["video_frames"] = video.frame_count
             entry["policy_steps"] = len(transitions)
             entry["success"] = bool(transitions and transitions[-1]["is_success"])
+            entry["ever_success"] = any(transition["is_success"] for transition in transitions)
+            entry["first_success_policy_step"] = next(
+                (transition["policy_step"] for transition in transitions if transition["is_success"]), None
+            )
             episode_report = {
                 **entry,
                 "initial_observation": initial,
                 "final_observation": observation,
+                "min_observed_interarm_clearance_m": min_observed_interarm_clearance_m,
                 "object_displacement_m": {
                     name: math.dist(initial["objects"][name]["position_m"], observation["objects"][name]["position_m"])
                     for name in ("cup", "plate")
@@ -570,6 +672,7 @@ def main(argv: list[str] | None = None) -> int:
     except BaseException as exc:
         report["status"] = "failed"
         report["error"] = f"{type(exc).__name__}: {exc}"
+        report["error_policy_step"] = current_step
         report["traceback"] = traceback.format_exc()
         print(report["error"], file=sys.stderr, flush=True)
     finally:

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "camera_path": "/World/Sensors/HeadCamera",
+  "resolution_px": [640, 480],
+  "eye_world_m": [0.300515, 0.23, 1.88],
+  "quaternion_wxyz": [0.7029039776384705, -0.07698050545441136, 0.07698050545441136, -0.7029039776384705],
+  "focal_length_m": 0.031725,
+  "horizontal_aperture_m": 0.036,
+  "horizontal_flip_for_dataset": false,
+  "height_above_table_m": 1.13,
+  "table_top_z_m": 0.75,
+  "provenance": {
+    "status": "Estimated comparison view, not measured camera extrinsics",
+    "source": "Existing nominal 564px camera and 12.5deg tilt; framing centered between the recorded cup and plate",
+    "frame_alignment": "Source +X maps to world -Y (image right); source +Y maps to world +X (image up); no image reflection"
+  },
+  "lens_model": "OpenCvPinhole",
+  "intrinsics_px": {"fx": 564.0, "fy": 564.0, "cx": 320.0, "cy": 240.0},
+  "distortion_coefficients": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+}

@@ -45,6 +45,25 @@ class PolicyImagesTest(unittest.TestCase):
         with self.assertRaises(SystemExit):
             run._parse_args(["--policy-images", "all"])
 
+    def test_target_interpolation_flag(self):
+        args = run._parse_args(["--interpolate-targets"])
+        self.assertTrue(args.interpolate_targets)
+
+    def test_portable_joint_profile_does_not_change_policy_contract(self):
+        args = run._parse_args([
+            "--joint-command-profile", "franka-panda-interface",
+            "--trajectory-controller-profile", "franka-transfer",
+        ])
+        self.assertEqual(args.joint_command_profile, "franka-panda-interface")
+        self.assertEqual(args.trajectory_controller_profile, "franka-transfer")
+        self.assertFalse(args.interpolate_targets)
+
+    def test_joint_profile_and_linear_interpolation_are_exclusive(self):
+        with self.assertRaises(SystemExit):
+            run._parse_args([
+                "--interpolate-targets", "--joint-command-profile", "franka-panda-interface"
+            ])
+
 
 if __name__ == "__main__":
     unittest.main()

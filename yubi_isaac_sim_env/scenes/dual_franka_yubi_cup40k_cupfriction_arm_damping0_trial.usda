@@ -1,0 +1,74 @@
+#usda 1.0
+(
+    customLayerData = {
+        string status = "Temporary A/B trial: both Panda arm drive damping values set to zero; all other scene settings inherited"
+    }
+    subLayers = [@dual_franka_yubi_cup40k_cupfriction_trial.usda@]
+)
+
+over "World"
+{
+    over "Robots"
+    {
+        over "LeftMount"
+        {
+            over "Panda"
+            {
+                over "joints"
+                {
+                    over "panda_joint1" {
+                        float drive:angular:physics:damping = 0
+                    }
+                    over "panda_joint2" {
+                        float drive:angular:physics:damping = 0
+                    }
+                    over "panda_joint3" {
+                        float drive:angular:physics:damping = 0
+                    }
+                    over "panda_joint4" {
+                        float drive:angular:physics:damping = 0
+                    }
+                    over "panda_joint5" {
+                        float drive:angular:physics:damping = 0
+                    }
+                    over "panda_joint6" {
+                        float drive:angular:physics:damping = 0
+                    }
+                    over "panda_joint7" {
+                        float drive:angular:physics:damping = 0
+                    }
+                }
+            }
+        }
+        over "RightMount"
+        {
+            over "Panda"
+            {
+                over "joints"
+                {
+                    over "panda_joint1" {
+                        float drive:angular:physics:damping = 0
+                    }
+                    over "panda_joint2" {
+                        float drive:angular:physics:damping = 0
+                    }
+                    over "panda_joint3" {
+                        float drive:angular:physics:damping = 0
+                    }
+                    over "panda_joint4" {
+                        float drive:angular:physics:damping = 0
+                    }
+                    over "panda_joint5" {
+                        float drive:angular:physics:damping = 0
+                    }
+                    over "panda_joint6" {
+                        float drive:angular:physics:damping = 0
+                    }
+                    over "panda_joint7" {
+                        float drive:angular:physics:damping = 0
+                    }
+                }
+            }
+        }
+    }
+}

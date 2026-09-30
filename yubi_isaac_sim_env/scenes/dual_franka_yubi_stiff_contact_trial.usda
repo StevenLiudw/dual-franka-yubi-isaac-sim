@@ -1,0 +1,338 @@
+#usda 1.0
+(
+    customLayerData = {
+        int cup_contact_colliders = 33
+        double cup_contact_damping_N_s_per_m = 40
+        double cup_contact_stiffness_N_per_m = 20000
+        string status = "Unmeasured compliant cup contact; original 80 mm visual and collision geometry remain rigid and unchanged"
+    }
+    subLayers = [
+        @dual_franka_yubi_textured_replay.usda@
+    ]
+)
+
+over "World"
+{
+    over "ContactExperiment"
+    {
+        def Material "CompliantCupPlastic" (
+            prepend apiSchemas = ["PhysicsMaterialAPI", "PhysxMaterialAPI"]
+        )
+        {
+            float physics:dynamicFriction = 0.35
+            float physics:restitution = 0
+            float physics:staticFriction = 0.45
+            bool physxMaterial:compliantContactAccelerationSpring = 0
+            float physxMaterial:compliantContactDamping = 40
+            float physxMaterial:compliantContactStiffness = 20000
+            uniform token physxMaterial:frictionCombineMode = "average"
+            uniform token physxMaterial:restitutionCombineMode = "min"
+        }
+    }
+
+    over "Objects"
+    {
+        over "Cup"
+        {
+            over "Collision"
+            {
+                over "Base" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_00" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_01" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_02" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_03" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_04" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_05" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_06" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_07" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_08" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_09" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_10" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_11" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_12" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_13" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_14" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_15" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_16" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_17" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_18" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_19" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_20" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_21" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_22" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_23" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_24" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_25" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_26" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_27" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_28" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_29" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_30" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+
+                over "Wall_31" (
+                    prepend apiSchemas = ["MaterialBindingAPI"]
+                )
+                {
+                    rel material:binding:physics = </World/ContactExperiment/CompliantCupPlastic> (
+                        bindMaterialAs = "weakerThanDescendants"
+                    )
+                }
+            }
+        }
+    }
+}

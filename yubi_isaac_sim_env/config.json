@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "status": "illustrative dual-arm mounts; robot base poses were not measured in the source videos",
+  "robot_model": "franka_panda",
   "robot_asset": "assets/franka_yubi_panda.usdc",
   "arms": {
     "left": {
@@ -27,11 +28,17 @@
     -2.81,
     0.0,
     3.037,
-    0.741
+    0.0
   ],
   "physics_hz": 60,
   "policy_hz": 10,
-  "max_policy_steps": 150,
+  "max_policy_steps": 300,
+  "panda_joint_drive": {
+    "source_stiffness_s_inv2": 625.0,
+    "stiffness_s_inv2": 2500.0,
+    "damping_s_inv": 70.710678,
+    "status": "High-bandwidth damping ratio 0.707 acceleration drives; waypoint values and 10 Hz replay timing are unchanged"
+  },
   "success": {
     "cup_center_radius_m": 0.035,
     "cup_bottom_height_tolerance_m": 0.002,
@@ -41,12 +48,15 @@
     "dwell_policy_steps": 5
   },
   "yubi": {
-    "q_closed_rad": 0.0,
-    "q_open_rad": 0.6,
+    "q_closed_rad": -0.1,
+    "q_open_rad": 0.7,
     "home_open_fraction": 1.0,
-    "limit_status": "Conservative CAD exterior-mesh collision-free opening through 0.6 rad; motorized servo limits and PhysX contact remain uncalibrated",
-    "grip_drive_max_force_Nm": 0.5,
-    "force_status": "Conservative simulation tuning placeholder, not a measured continuous motor limit",
+    "limit_status": "CAD-derived distal aperture range -0.10 to +0.70 rad; distal jaw/base clearance checked at 33 angles. Not a measured servo or full-assembly mechanical limit. See gripper_aperture_calibration.json.",
+    "grip_drive_stiffness_Nm_per_rad": 40.0,
+    "grip_drive_damping_Nm_s_per_rad": 0.22,
+    "grip_drive_max_force_Nm": 4.1,
+    "grip_drive_max_velocity_rad_s": 4.817108735504349,
+    "force_status": "XM430-W350-R 12 V official stall torque and no-load speed; stiffness/damping are critically damped simulation tuning estimates, not measured YUBI gains",
     "mass_kg": {
       "base": 0.307,
       "left": 0.111,

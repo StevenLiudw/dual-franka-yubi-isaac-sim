@@ -5,8 +5,11 @@ This module validates those waypoints, buffers an action chunk, and converts
 the next waypoint to the environment's dual-arm joint-position command. It
 uses NumPy only and can be tested without starting Isaac Sim.
 
-The controller is a bounded differential IK step, not a path planner. A target
-may need several control steps to converge, and it does not check collisions.
+The controller previews every pose in a submitted chunk.  A natural cubic
+spline supplies continuous Cartesian waypoint velocities to bounded
+resolved-rate IK, while the selected robot reference governor supplies bounded
+joint velocity, acceleration, and jerk.  It is still not a collision-aware
+path planner.
 """
 
 from __future__ import annotations
@@ -18,11 +21,68 @@ from typing import Any
 
 import numpy as np
 
+from .interarm_guard import limit_interarm_motion
+
 
 ARM_NAMES = tuple(f"panda_joint{i}" for i in range(1, 8))
 SIDES = frozenset(("left", "right"))
 ARM_COMMAND_KEYS = frozenset(("position_m", "quaternion_wxyz", "gripper_open_fraction"))
 CHUNK_KEYS = frozenset(("action_dt_s", "waypoints", "execute_steps"))
+
+TRAJECTORY_EXECUTOR_PROFILES = {
+    "default": {},
+    "franka-transfer": {
+        "damping": 0.08,
+        "position_gain": 0.6,
+        "orientation_gain": 0.4,
+        "max_position_step_m": 0.05,
+        "max_orientation_step_rad": 0.22,
+        "max_joint_step_rad": 0.065,
+    },
+    "franka-transfer-smooth": {
+        "damping": 0.12,
+        "position_gain": 0.5,
+        "orientation_gain": 0.25,
+        "max_position_step_m": 0.04,
+        "max_orientation_step_rad": 0.15,
+        "max_joint_step_rad": 0.05,
+    },
+    "franka-lookahead": {
+        # Time-faithful tracking: on the nominal path, 0.7 of the next 10 Hz
+        # displacement comes from pose error and 0.3 from whole-chunk preview.
+        # Their sum is 1.0, avoiding both intentional slowdown and the doubled
+        # step that results from full feedback plus full feed-forward.
+        "damping": 0.08,
+        "position_gain": 0.7,
+        "orientation_gain": 0.7,
+        "max_position_step_m": 0.06,
+        "max_orientation_step_rad": 0.3,
+        "max_joint_step_rad": 0.08,
+        "lookahead_feedforward_gain": 0.3,
+    },
+    "panda-pose-replay": {
+        # Full 6D replay exposes the old 0.08 rad/100 ms implementation cap
+        # during rapid wrist retreats. Use the slowest Panda joint's nominal
+        # 2.174 rad/s bound at 10 Hz; the servo governor enforces each joint's
+        # velocity, acceleration and jerk limits at its own period.
+        "damping": 0.08,
+        "position_gain": 0.7,
+        "orientation_gain": 0.7,
+        "max_position_step_m": 0.10,
+        "max_orientation_step_rad": 0.3,
+        "max_joint_step_rad": 0.2174,
+        "lookahead_feedforward_gain": 0.3,
+    },
+}
+
+
+def trajectory_executor_profile(name: str) -> dict[str, float]:
+    """Return one shared simulation/hardware differential-IK configuration."""
+    try:
+        return dict(TRAJECTORY_EXECUTOR_PROFILES[name])
+    except KeyError as exc:
+        choices = ", ".join(TRAJECTORY_EXECUTOR_PROFILES)
+        raise ValueError(f"Unknown trajectory executor profile {name!r}; choose {choices}") from exc
 
 
 class TrajectoryFormatError(ValueError):
@@ -100,6 +160,40 @@ def _cap_norm(vector: np.ndarray, maximum: float) -> np.ndarray:
     return vector * (maximum / norm) if norm > maximum else vector
 
 
+def _natural_cubic_tangents(values: np.ndarray, times_s: np.ndarray) -> np.ndarray:
+    """Return C2 natural-cubic derivatives at every time-stamped knot.
+
+    Solving the coupled tridiagonal system means the derivative at an
+    executable waypoint uses the entire submitted chunk, including waypoints
+    beyond ``execute_steps``.  This is intentionally a preview operation, not
+    a causal filter applied after commands reach the robot.
+    """
+    count = len(values)
+    if count == 1:
+        return np.zeros_like(values)
+    intervals = np.diff(times_s)
+    if times_s.shape != (count,) or np.any(intervals <= 0):
+        raise TrajectoryFormatError("spline waypoint times must be strictly increasing")
+    matrix = np.zeros((count, count), dtype=np.float64)
+    rhs = np.zeros_like(values, dtype=np.float64)
+    matrix[0, 0:2] = (2.0, 1.0)
+    matrix[-1, -2:] = (1.0, 2.0)
+    rhs[0] = 3.0 * (values[1] - values[0]) / intervals[0]
+    rhs[-1] = 3.0 * (values[-1] - values[-2]) / intervals[-1]
+    for index in range(1, count - 1):
+        previous_h, next_h = intervals[index - 1], intervals[index]
+        matrix[index, index - 1:index + 2] = (
+            next_h,
+            2.0 * (previous_h + next_h),
+            previous_h,
+        )
+        rhs[index] = 3.0 * (
+            next_h * (values[index] - values[index - 1]) / previous_h
+            + previous_h * (values[index + 1] - values[index]) / next_h
+        )
+    return np.linalg.solve(matrix, rhs)
+
+
 class TrajectoryChunkExecutor:
     """Convert buffered dual-arm tool trajectories to joint actions.
 
@@ -142,6 +236,7 @@ class TrajectoryChunkExecutor:
         max_orientation_step_rad: float = 0.3,
         max_joint_step_rad: float = 0.08,
         max_target_distance_m: float = 1.5,
+        lookahead_feedforward_gain: float = 0.0,
     ) -> None:
         self.policy_hz = _positive_number(policy_hz, "policy_hz")
         self.damping = _positive_number(damping, "damping")
@@ -151,9 +246,15 @@ class TrajectoryChunkExecutor:
         self.max_orientation_step_rad = _positive_number(max_orientation_step_rad, "max_orientation_step_rad")
         self.max_joint_step_rad = _positive_number(max_joint_step_rad, "max_joint_step_rad")
         self.max_target_distance_m = _positive_number(max_target_distance_m, "max_target_distance_m")
+        if isinstance(lookahead_feedforward_gain, bool):
+            raise TrajectoryFormatError("lookahead_feedforward_gain must be a finite nonnegative number")
+        self.lookahead_feedforward_gain = float(lookahead_feedforward_gain)
+        if not math.isfinite(self.lookahead_feedforward_gain) or self.lookahead_feedforward_gain < 0:
+            raise TrajectoryFormatError("lookahead_feedforward_gain must be a finite nonnegative number")
         self._queue: deque[dict[str, dict[str, Any]]] = deque()
         self._episode: int | None = None
         self._last_step = -1
+        self.last_interarm_guard: dict[str, Any] = {"active": False}
 
     @property
     def remaining_waypoints(self) -> int:
@@ -166,6 +267,7 @@ class TrajectoryChunkExecutor:
         self._queue.clear()
         self._episode = episode
         self._last_step = -1
+        self.last_interarm_guard = {"active": False}
 
     def _validate_waypoint(self, waypoint: Any, index: int) -> dict[str, dict[str, Any]]:
         if not isinstance(waypoint, Mapping) or not waypoint or set(waypoint) - SIDES:
@@ -218,8 +320,43 @@ class TrajectoryChunkExecutor:
             raise TrajectoryFormatError("execute_steps must be an integer in [1, len(waypoints)]")
         # Validate the entire prediction before replacing a live queue.
         normalized = [self._validate_waypoint(waypoint, i) for i, waypoint in enumerate(waypoints)]
+        self._add_chunk_preview(normalized, action_dt_s)
         self._queue = deque(normalized[:execute_steps])
         return len(self._queue)
+
+    @staticmethod
+    def _add_chunk_preview(waypoints: list[dict[str, dict[str, Any]]], action_dt_s: float) -> None:
+        """Annotate pose commands with whole-chunk Cartesian spline velocity."""
+        for side in SIDES:
+            indices = [
+                index for index, waypoint in enumerate(waypoints)
+                if side in waypoint and "position_m" in waypoint[side]
+            ]
+            if not indices:
+                continue
+            positions = np.asarray([waypoints[index][side]["position_m"] for index in indices])
+            times = np.asarray(indices, dtype=np.float64) * action_dt_s
+            if len(indices) == 1:
+                linear_velocity = np.zeros((1, 3), dtype=np.float64)
+                angular_velocity = np.zeros((1, 3), dtype=np.float64)
+            else:
+                linear_velocity = _natural_cubic_tangents(positions, times)
+                quaternions = np.asarray(
+                    [waypoints[index][side]["quaternion_wxyz"] for index in indices], dtype=np.float64
+                )
+                for index in range(1, len(quaternions)):
+                    if float(np.dot(quaternions[index - 1], quaternions[index])) < 0:
+                        quaternions[index] *= -1.0
+                rotation_path = np.zeros((len(quaternions), 3), dtype=np.float64)
+                for index in range(1, len(quaternions)):
+                    rotation_path[index] = rotation_path[index - 1] + _world_rotation_error(
+                        quaternions[index], quaternions[index - 1]
+                    )
+                angular_velocity = _natural_cubic_tangents(rotation_path, times)
+            for row, waypoint_index in enumerate(indices):
+                command = waypoints[waypoint_index][side]
+                command["_linear_velocity_m_s"] = linear_velocity[row].tolist()
+                command["_angular_velocity_rad_s"] = angular_velocity[row].tolist()
 
     def _arm_action(self, side: str, command: dict[str, Any], observation: Mapping[str, Any]) -> dict:
         action = {}
@@ -263,12 +400,23 @@ class TrajectoryChunkExecutor:
             raise TrajectoryFormatError(
                 f"{side} tool target is {distance:.3f} m away; limit is {self.max_target_distance_m:.3f} m"
             )
-        position_error = _cap_norm(goal_position - position, self.max_position_step_m)
+        position_error = goal_position - position
         goal_orientation = np.asarray(command["quaternion_wxyz"], dtype=np.float64)
-        orientation_error = _cap_norm(
-            _world_rotation_error(goal_orientation, orientation), self.max_orientation_step_rad
+        orientation_error = _world_rotation_error(goal_orientation, orientation)
+        preview_dt = 1.0 / self.policy_hz
+        linear_preview = np.asarray(command.get("_linear_velocity_m_s", (0.0, 0.0, 0.0)))
+        angular_preview = np.asarray(command.get("_angular_velocity_rad_s", (0.0, 0.0, 0.0)))
+        translation = _cap_norm(
+            self.position_gain * position_error
+            + self.lookahead_feedforward_gain * preview_dt * linear_preview,
+            self.max_position_step_m,
         )
-        twist = np.concatenate((self.position_gain * position_error, self.orientation_gain * orientation_error))
+        rotation = _cap_norm(
+            self.orientation_gain * orientation_error
+            + self.lookahead_feedforward_gain * preview_dt * angular_preview,
+            self.max_orientation_step_rad,
+        )
+        twist = np.concatenate((translation, rotation))
         gram = jacobian @ jacobian.T + (self.damping**2) * np.eye(6)
         try:
             increment = jacobian.T @ np.linalg.solve(gram, twist)
@@ -305,9 +453,15 @@ class TrajectoryChunkExecutor:
             self.submit_chunk(predict(observation, step, episode))
         waypoint = self._queue[0]
         result = {side: self._arm_action(side, command, observation) for side, command in waypoint.items()}
+        result, self.last_interarm_guard = limit_interarm_motion(observation, result)
         self._queue.popleft()
         self._last_step = step
         return result
 
 
-__all__ = ["TrajectoryChunkExecutor", "TrajectoryFormatError"]
+__all__ = [
+    "TRAJECTORY_EXECUTOR_PROFILES",
+    "TrajectoryChunkExecutor",
+    "TrajectoryFormatError",
+    "trajectory_executor_profile",
+]

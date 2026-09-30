@@ -11,7 +11,11 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from yubi_isaac_sim_env.policy_adapter import TrajectoryChunkExecutor, TrajectoryFormatError
+from yubi_isaac_sim_env.policy_adapter import (
+    TrajectoryChunkExecutor,
+    TrajectoryFormatError,
+    trajectory_executor_profile,
+)
 
 
 def observation(*, joint_zero: float = 0.0, jacobian: list | None = None) -> dict:
@@ -45,6 +49,41 @@ def chunk(*waypoints, execute_steps=None, action_dt_s=0.1) -> dict:
 
 
 class TrajectoryChunkExecutorTests(unittest.TestCase):
+    def test_franka_transfer_profile_is_less_aggressive_than_default(self):
+        profile = trajectory_executor_profile("franka-transfer")
+        self.assertGreater(profile["damping"], 0.05)
+        self.assertLess(profile["orientation_gain"], 0.7)
+        self.assertLess(profile["max_joint_step_rad"], 0.08)
+
+    def test_lookahead_profile_previews_full_chunk(self):
+        profile = trajectory_executor_profile("franka-lookahead")
+        executor = TrajectoryChunkExecutor(**profile)
+        prediction = chunk(
+            pose_waypoint(position=[0.0, 0.0, 0.0]),
+            pose_waypoint(position=[0.1, 0.0, 0.0]),
+            pose_waypoint(position=[0.4, 0.0, 0.0]),
+            execute_steps=1,
+        )
+        executor.submit_chunk(prediction)
+        preview_with_future = executor._queue[0]["left"]["_linear_velocity_m_s"][0]
+        short = TrajectoryChunkExecutor(**profile)
+        short.submit_chunk(chunk(pose_waypoint(position=[0.0, 0.0, 0.0])))
+        preview_without_future = short._queue[0]["left"]["_linear_velocity_m_s"][0]
+        self.assertGreater(preview_with_future, 0.0)
+        self.assertEqual(preview_without_future, 0.0)
+
+    def test_lookahead_feedforward_preserves_model_output_contract(self):
+        executor = TrajectoryChunkExecutor(**trajectory_executor_profile("franka-lookahead"))
+        action = executor.act(
+            observation(), 0, 0,
+            lambda *_: chunk(
+                pose_waypoint(position=[0.0, 0.0, 0.0]),
+                pose_waypoint(position=[0.1, 0.0, 0.0]),
+            ),
+        )
+        self.assertEqual(set(action["left"]), {"arm_joint_targets_rad", "gripper_open_fraction"})
+        self.assertGreater(action["left"]["arm_joint_targets_rad"][0], 0.0)
+
     def test_buffers_chunk_and_predicts_again_only_after_execution_horizon(self):
         calls = []
 
